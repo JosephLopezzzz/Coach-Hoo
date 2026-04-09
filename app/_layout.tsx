@@ -1,0 +1,37 @@
+import { Stack, router } from 'expo-router';
+import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { MealProvider } from '../context/MealContext';
+import { Colors } from '../constants/theme';
+
+function RootLayoutNav() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, isLoading]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <MealProvider>
+        <StatusBar style="light" backgroundColor={Colors.bg} />
+        <RootLayoutNav />
+      </MealProvider>
+    </AuthProvider>
+  );
+}
