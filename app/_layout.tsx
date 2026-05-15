@@ -6,20 +6,20 @@ import { MealProvider } from '../context/MealContext';
 import { Colors } from '../constants/theme';
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isOnboarded, isLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading) return;
-    if (isAuthenticated) {
+    if (isOnboarded) {
       router.replace('/(tabs)');
     } else {
-      router.replace('/(auth)/login');
+      router.replace('/(onboarding)');
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isOnboarded, isLoading]);
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }}>
-      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

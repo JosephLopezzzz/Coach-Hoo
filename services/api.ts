@@ -13,24 +13,25 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request Interceptor — attach JWT ─────────────────────────────────────────
+// ─── Request Interceptor — attach Local User ID ──────────────────────────────
 api.interceptors.request.use(async (config) => {
   try {
-    const token = await SecureStore.getItemAsync('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const storedUser = await SecureStore.getItemAsync('coach_hoo_user_data');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.id) {
+        config.headers['X-User-ID'] = user.id;
+      }
     }
   } catch (_) {}
   return config;
 });
 
-// ─── Response Interceptor — handle 401 ───────────────────────────────────────
+// ─── Response Interceptor ───────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('auth_token');
-    }
+    // No more 401 handling for tokens
     return Promise.reject(error);
   }
 );

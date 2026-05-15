@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { authApi } from '../../services/api';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
 
 const ACTIVITY_LABELS: Record<number, string> = {
@@ -33,18 +32,18 @@ function MacroTarget({ label, value, color }: { label: string; value: number; co
 }
 
 export default function ProfileScreen() {
-  const { user, logout, updateUser } = useAuth();
-  const [loggingOut, setLoggingOut] = useState(false);
+  const { user, resetUser, updateUser } = useAuth();
+  const [resetting, setResetting] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
+  const handleReset = () => {
+    Alert.alert('Reset Progress', 'This will delete all your data and progress. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Log out',
+        text: 'Reset Everything',
         style: 'destructive',
         onPress: async () => {
-          setLoggingOut(true);
-          await logout();
+          setResetting(true);
+          await resetUser();
         },
       },
     ]);
@@ -58,11 +57,10 @@ export default function ProfileScreen() {
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
           <Text style={styles.avatarInitial}>
-            {user.full_name?.[0]?.toUpperCase() ?? user.email[0].toUpperCase()}
+            {user.full_name?.[0]?.toUpperCase() ?? 'H'}
           </Text>
         </View>
         <Text style={styles.userName}>{user.full_name ?? 'Coach Hoo User'}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
         <View style={[styles.goalBadge, { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary }]}>
           <Text style={styles.goalBadgeText}>
             {user.goal === 'lose' ? '🔥 Lose Weight' : user.goal === 'gain' ? '💪 Gain Muscle' : '⚖️ Maintain'}
@@ -92,6 +90,7 @@ export default function ProfileScreen() {
         <StatRow label="Weight"         value={user.weight_kg ? `${user.weight_kg} kg` : '—'} />
         <StatRow label="Activity"       value={ACTIVITY_LABELS[user.activity_level ?? 2]} />
         <StatRow label="Country"        value={user.country ?? 'Philippines'} />
+        <StatRow label="Health"         value={user.health_condition ? user.health_condition.replace('_', ' ') : 'None'} />
       </View>
 
       {/* BMI snapshot */}
@@ -112,15 +111,16 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Logout */}
-      <Pressable style={styles.logoutBtn} onPress={handleLogout} disabled={loggingOut}>
-        {loggingOut
+      {/* Reset */}
+      <Pressable style={styles.logoutBtn} onPress={handleReset} disabled={resetting}>
+        {resetting
           ? <ActivityIndicator color={Colors.error} />
           : <>
-              <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-              <Text style={styles.logoutText}>Log Out</Text>
+              <Ionicons name="trash-outline" size={20} color={Colors.error} />
+              <Text style={styles.logoutText}>Reset All Progress</Text>
             </>}
       </Pressable>
+
 
       <Text style={styles.version}>Coach Hoo v1.0.0 · Built for 🇵🇭</Text>
     </ScrollView>

@@ -66,6 +66,8 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [cookingMethod, setCookingMethod] = useState('raw');
   const [grams,         setGrams]         = useState('100');
   const [withBones,     setWithBones]     = useState(false);
+  const [showMacros,    setShowMacros]    = useState(false);
+  const [macros,        setMacros]        = useState({ cal: '', p: '', c: '', f: '' });
   const [error,         setError]         = useState('');
 
   const handleSubmit = () => {
@@ -73,13 +75,25 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     if (!foodType.trim()) { setError('Enter a food type'); return; }
     if (isNaN(quantity) || quantity <= 0) { setError('Enter a valid weight (g)'); return; }
     setError('');
-    onSubmit({
+
+    const payload: any = {
       type:       'manual',
       food_type:  foodType.trim(),
       method:     cookingMethod,
       quantity_g: quantity,
       with_bones: withBones,
-    });
+    };
+
+    if (showMacros) {
+      payload.manual_macros = {
+        calories: parseFloat(macros.cal) || 0,
+        protein:  parseFloat(macros.p)   || 0,
+        carbs:    parseFloat(macros.c)   || 0,
+        fat:      parseFloat(macros.f)   || 0,
+      };
+    }
+
+    onSubmit(payload);
   };
 
   return (
@@ -141,6 +155,39 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
           thumbColor={Colors.textPrimary}
         />
       </View>
+
+      <View style={styles.macrosToggleRow}>
+        <Text style={styles.sectionLabel}>Enter Macros Manually?</Text>
+        <Switch
+          value={showMacros}
+          onValueChange={setShowMacros}
+          trackColor={{ false: Colors.border, true: Colors.accent }}
+          thumbColor={Colors.textPrimary}
+        />
+      </View>
+
+      {showMacros && (
+        <View style={styles.manualMacrosGrid}>
+          {[
+            { key: 'cal', label: 'Calories', color: Colors.calories },
+            { key: 'p',   label: 'Protein',  color: Colors.protein },
+            { key: 'c',   label: 'Carbs',    color: Colors.carbs },
+            { key: 'f',   label: 'Fat',      color: Colors.fat },
+          ].map((m) => (
+            <View key={m.key} style={styles.macroInputBox}>
+              <Text style={[styles.macroInputLabel, { color: m.color }]}>{m.label}</Text>
+              <TextInput
+                style={styles.macroInput}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={Colors.textMuted}
+                value={(macros as any)[m.key]}
+                onChangeText={(v) => setMacros({ ...macros, [m.key]: v })}
+              />
+            </View>
+          ))}
+        </View>
+      )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -229,6 +276,40 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  macrosToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  manualMacrosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  macroInputBox: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: Colors.bgInput,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  macroInputLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  macroInput: {
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
+    height: 32,
+    padding: 0,
   },
   error: {
     color: Colors.error,

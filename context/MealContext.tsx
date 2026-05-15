@@ -21,7 +21,7 @@ const DEFAULT_TOTALS: MacroResult = { calories: 0, protein: 0, carbs: 0, fat: 0 
 const MealContext = createContext<MealContextType | null>(null);
 
 export function MealProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isOnboarded } = useAuth();
   const [meals,     setMeals]     = useState<Meal[]>([]);
   const [totals,    setTotals]    = useState<MacroResult>(DEFAULT_TOTALS);
   const [targets,   setTargets]   = useState<DailyTargets | null>(null);
@@ -29,7 +29,7 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const loadToday = useCallback(async (date?: string) => {
-    if (!isAuthenticated) return;
+    if (!isOnboarded) return;
     setIsLoading(true);
     try {
       const { data } = await mealsApi.today(date);
@@ -42,12 +42,12 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isOnboarded]);
 
-  // Load today's data whenever auth state changes
+  // Load today's data whenever onboarding state changes
   useEffect(() => {
-    if (isAuthenticated) loadToday();
-  }, [isAuthenticated]);
+    if (isOnboarded) loadToday();
+  }, [isOnboarded]);
 
   const logMeal = useCallback(async (
     meal_type: string,

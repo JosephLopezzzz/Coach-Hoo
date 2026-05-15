@@ -11,6 +11,7 @@ export interface User {
   goal?: 'lose' | 'maintain' | 'gain';
   activity_level?: 1 | 2 | 3 | 4 | 5;
   country?: string;
+  health_condition?: string;
   created_at: string;
   // Joined from daily_targets
   calories_target?: number;

@@ -52,7 +52,9 @@ export default function LogMealScreen() {
         { text: 'OK', onPress: () => { setItems([]); setPreview(null); } },
       ]);
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error ?? 'Could not log meal. Please check food names.');
+      console.error('[LogMeal] Submit failed:', err.response?.data ?? err.message);
+      const errorMsg = err.response?.data?.error ?? err.message ?? 'Could not log meal.';
+      Alert.alert('Logging Failed', `${errorMsg}\n\nMake sure the food names are recognizable or try adding fewer items.`);
     } finally {
       setLoading(false);
     }
