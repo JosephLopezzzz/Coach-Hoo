@@ -90,7 +90,7 @@ export default function LogMealScreen() {
             <Text style={styles.sectionTitle}>Items to Log ({items.length})</Text>
             {items.map((item, idx) => {
               const label = item.type === 'manual'
-                ? `${(item as any).food_type} · ${(item as any).method ?? 'raw'} · ${item.quantity_g}g${(item as any).with_bones ? ' · 🦴' : ''}`
+                ? `${(item as any).food_type} · ${(item as any).method ?? 'raw'} · ${item.quantity_g}g${(item as any).bone_weight_g && (item as any).bone_weight_g > 0 ? ` · 🦴 ${(item as any).bone_weight_g}g` : ((item as any).with_bones ? ' · 🦴' : '')}`
                 : `${item.type} · ${item.quantity_g}g`;
               return (
                 <View key={idx} style={styles.pendingItem}>

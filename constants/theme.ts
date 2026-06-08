@@ -2,47 +2,47 @@
 
 export const Colors = {
   // Backgrounds
-  bg:           '#0A0E1A',  // deep dark navy
-  bgCard:       '#111827',  // card surface
-  bgElevated:   '#1A2235',  // elevated elements
-  bgInput:      '#1E2D45',  // input fields
+  bg:           '#FAF6EE',  // warm cozy cream/beige background
+  bgCard:       '#FFFFFF',  // white card surface
+  bgElevated:   '#F5EBE0',  // warm cream elevated element
+  bgInput:      '#FFFFFF',  // white input fields
 
   // Primary brand
-  primary:      '#00C47C',  // vibrant green
-  primaryDim:   '#008F59',
-  primaryGlow:  'rgba(0, 196, 124, 0.15)',
+  primary:      '#E8A254',  // golden yellow
+  primaryDim:   '#D08B3E',
+  primaryGlow:  'rgba(232, 162, 84, 0.12)',
 
   // Accent
-  accent:       '#6C63FF',  // purple
-  accentDim:    '#4D47CC',
+  accent:       '#7CB7A5',  // soft mint/teal
+  accentDim:    '#62A491',
 
-  // Macro colors (consistent across app)
-  calories:     '#FF6B9D',  // pink-red
-  protein:      '#FF8C42',  // orange
-  carbs:        '#FFD93D',  // yellow
-  fat:          '#6BCAE2',  // sky blue
+  // Macro colors (consistent across app, based on brand palette)
+  calories:     '#E8A254',  // golden
+  protein:      '#FFA76C',  // soft peach/orange
+  carbs:        '#9BE1C8',  // mint green
+  fat:          '#7CB7A5',  // soft teal
 
   // Text
-  textPrimary:  '#F0F4FF',
-  textSecondary:'#8B9EC7',
-  textMuted:    '#4A5A7A',
-  textInverse:  '#0A0E1A',
+  textPrimary:  '#2F3E46',  // dark slate text
+  textSecondary:'#526E7A',  // lighter slate
+  textMuted:    '#8FA4AE',  // muted slate
+  textInverse:  '#FFFFFF',  // white text on colored buttons
 
   // Borders
-  border:       '#1E2D45',
-  borderLight:  '#2A3A5A',
+  border:       '#EEDECB',  // warm border color
+  borderLight:  '#F5EBE0',
 
   // Status
-  success:      '#00C47C',
-  warning:      '#FFB800',
-  error:        '#FF4D6D',
-  info:         '#4DA6FF',
+  success:      '#7CB7A5',
+  warning:      '#FFA76C',
+  error:        '#E05252',
+  info:         '#9BE1C8',
 
   // Meal type colors
-  breakfast:    '#FF9A3C',
-  lunch:        '#00C47C',
-  dinner:       '#6C63FF',
-  snack:        '#FF6B9D',
+  breakfast:    '#E8A254',  // Golden
+  lunch:        '#9BE1C8',  // Mint
+  dinner:       '#7CB7A5',  // Teal
+  snack:        '#FFA76C',  // Soft orange
 } as const;
 
 export const Spacing = {

@@ -1,85 +1,452 @@
-import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// ─── Base URL ─────────────────────────────────────────────────────────────────
-// Change this to your machine's local IP when testing on a physical device.
-// For Android emulator use: http://10.0.2.2:5000
-// For iOS simulator  use:   http://localhost:5000
-const BASE_URL = 'http://10.0.2.2:5000'; // Android emulator default
+// ─── Core Offline Databases ───────────────────────────────────────────────────
 
-const api = axios.create({
-  baseURL: BASE_URL,
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
-});
+export const FOODS_DB = [
+  { id: 'f1', name: 'Chicken Breast', category: 'poultry', calories_per_100g: 165, protein_per_100g: 31, carbs_per_100g: 0, fat_per_100g: 3.6, is_raw: true, source: 'USDA' },
+  { id: 'f2', name: 'Chicken Thigh', category: 'poultry', calories_per_100g: 209, protein_per_100g: 26, carbs_per_100g: 0, fat_per_100g: 10.9, is_raw: true, source: 'USDA' },
+  { id: 'f3', name: 'Chicken Wings', category: 'poultry', calories_per_100g: 203, protein_per_100g: 30, carbs_per_100g: 0, fat_per_100g: 8.1, is_raw: true, source: 'USDA' },
+  { id: 'f4', name: 'Pork Belly', category: 'pork', calories_per_100g: 518, protein_per_100g: 9, carbs_per_100g: 0, fat_per_100g: 53, is_raw: true, source: 'USDA' },
+  { id: 'f5', name: 'Ground Beef', category: 'beef', calories_per_100g: 250, protein_per_100g: 26, carbs_per_100g: 0, fat_per_100g: 15, is_raw: true, source: 'USDA' },
+  { id: 'f6', name: 'Egg (Whole)', category: 'dairy-eggs', calories_per_100g: 155, protein_per_100g: 13, carbs_per_100g: 1.1, fat_per_100g: 11, is_raw: false, source: 'USDA' },
+  { id: 'f7', name: 'White Rice (Cooked)', category: 'grains', calories_per_100g: 130, protein_per_100g: 2.7, carbs_per_100g: 28, fat_per_100g: 0.3, is_raw: false, source: 'USDA' },
+  { id: 'f8', name: 'Brown Rice (Cooked)', category: 'grains', calories_per_100g: 111, protein_per_100g: 2.6, carbs_per_100g: 23, fat_per_100g: 0.9, is_raw: false, source: 'USDA' },
+  { id: 'f9', name: 'Tilapia', category: 'fish', calories_per_100g: 96, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 1.7, is_raw: true, source: 'USDA' },
+  { id: 'f10', name: 'Bangus (Milkfish)', category: 'fish', calories_per_100g: 148, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 6.7, is_raw: true, source: 'FNRI' },
+  { id: 'f11', name: 'Tofu', category: 'soy', calories_per_100g: 76, protein_per_100g: 8, carbs_per_100g: 1.9, fat_per_100g: 4.8, is_raw: false, source: 'USDA' },
+  { id: 'f12', name: 'Shrimp', category: 'seafood', calories_per_100g: 85, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 0.5, is_raw: true, source: 'USDA' },
+  { id: 'f13', name: 'Squid', category: 'seafood', calories_per_100g: 92, protein_per_100g: 16, carbs_per_100g: 3, fat_per_100g: 1.4, is_raw: true, source: 'USDA' },
+  { id: 'f14', name: 'Pork Chop', category: 'pork', calories_per_100g: 231, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 14, is_raw: true, source: 'USDA' },
+  { id: 'f15', name: 'Beef Ribeye', category: 'beef', calories_per_100g: 291, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 22, is_raw: true, source: 'USDA' },
+];
 
-// ─── Request Interceptor — attach Local User ID ──────────────────────────────
-api.interceptors.request.use(async (config) => {
+export const RECIPES_DB = [
+  { id: 'r1', name: 'Chicken Adobo', country: 'PH', total_weight_g: 500, description: 'Classic Filipino soy-sauce and vinegar stewed chicken', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 180, protein: 18, carbs: 3, fat: 11 } },
+  { id: 'r2', name: 'Pork Sinigang', country: 'PH', total_weight_g: 600, description: 'Sour tamarind soup with pork ribs and mixed vegetables', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 120, protein: 10, carbs: 4, fat: 7 } },
+  { id: 'r3', name: 'Chicken Tinola', country: 'PH', total_weight_g: 500, description: 'Ginger-flavored chicken soup with green papaya and chili leaves', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 90, protein: 12, carbs: 2, fat: 4 } },
+  { id: 'r4', name: 'Beef Kare-Kare', country: 'PH', total_weight_g: 650, description: 'Beef stew in a thick savory peanut sauce with vegetables', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 220, protein: 15, carbs: 8, fat: 14 } },
+  { id: 'r5', name: 'Chicken Inasal', country: 'PH', total_weight_g: 300, description: 'Ilonggo-style grilled chicken marinated in calamansi, lemongrass, and annatto', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 195, protein: 24, carbs: 1, fat: 10 } },
+];
+
+export const RESTAURANT_DB = [
+  { id: 'rt1', name: 'Jollibee 1pc Chickenjoy', restaurant_name: 'Jollibee', serving_size_g: 120, calories: 360, protein: 22, carbs: 12, fat: 24, country: 'PH' },
+  { id: 'rt2', name: 'Jollibee Peach Mango Pie', restaurant_name: 'Jollibee', serving_size_g: 80, calories: 270, protein: 3, carbs: 35, fat: 13, country: 'PH' },
+  { id: 'rt3', name: 'Jollibee Jolly Spaghetti', restaurant_name: 'Jollibee', serving_size_g: 220, calories: 400, protein: 12, carbs: 62, fat: 11, country: 'PH' },
+  { id: 'rt4', name: "McDonald's French Fries (Medium)", restaurant_name: "McDonald's", serving_size_g: 117, calories: 320, protein: 4, carbs: 43, fat: 15, country: 'US' },
+  { id: 'rt5', name: "McDonald's Big Mac", restaurant_name: "McDonald's", serving_size_g: 220, calories: 540, protein: 25, carbs: 46, fat: 28, country: 'US' },
+  { id: 'rt6', name: 'KFC 1pc Original Recipe Chicken', restaurant_name: 'KFC', serving_size_g: 125, calories: 320, protein: 19, carbs: 8, fat: 23, country: 'US' },
+];
+
+// ─── Local Helpers ────────────────────────────────────────────────────────────
+
+async function getLocalMeals(): Promise<any[]> {
   try {
-    const storedUser = await SecureStore.getItemAsync('coach_hoo_user_data');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      if (user.id) {
-        config.headers['X-User-ID'] = user.id;
+    const raw = await SecureStore.getItemAsync('coach_hoo_logged_meals');
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('Failed to parse meals:', err);
+    return [];
+  }
+}
+
+async function saveLocalMeals(meals: any[]) {
+  try {
+    await SecureStore.setItemAsync('coach_hoo_logged_meals', JSON.stringify(meals));
+  } catch (err) {
+    console.error('Failed to save meals:', err);
+  }
+}
+
+async function lookupFoodName(type: string, id: string): Promise<string> {
+  if (type === 'food') {
+    return FOODS_DB.find(fd => fd.id === id)?.name ?? 'Food Item';
+  }
+  if (type === 'recipe') {
+    return RECIPES_DB.find(rc => rc.id === id)?.name ?? 'Recipe Item';
+  }
+  if (type === 'restaurant') {
+    return RESTAURANT_DB.find(rt => rt.id === id)?.name ?? 'Fast Food Item';
+  }
+  return 'Food';
+}
+
+export function calculateDailyTargets(user: any) {
+  const age = parseFloat(user.age) || 25;
+  const height = parseFloat(user.height_cm) || 170;
+  const weight = parseFloat(user.weight_kg) || 70;
+  const sex = user.sex || 'male';
+  const goal = user.goal || 'maintain';
+
+  // Mifflin-St Jeor Formula BMR
+  let bmr = 0;
+  if (sex === 'male') {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  }
+
+  // TDEE - assumes Lightly Active multiplier (1.375)
+  const tdee = bmr * 1.375;
+
+  let calories_target = tdee;
+  if (goal === 'lose') {
+    calories_target = tdee - 500;
+  } else if (goal === 'gain') {
+    calories_target = tdee + 300;
+  }
+
+  // Standard Macros Target Split
+  const protein_target = Math.round(weight * 2.0); // 2.0g per kg of bodyweight
+  const fat_target = Math.round((calories_target * 0.25) / 9); // 25% of calories
+  const carbs_target = Math.round((calories_target - (protein_target * 4) - (fat_target * 9)) / 4);
+
+  return {
+    calories_target: Math.round(calories_target),
+    protein_target,
+    carbs_target,
+    fat_target,
+  };
+}
+
+export async function calculateItemMacros(item: any) {
+  let quantity = parseFloat(item.quantity_g) || 0;
+  let edibleWeight = quantity;
+
+  // Custom bone weight subtraction
+  if (item.bone_weight_g !== undefined && item.bone_weight_g > 0) {
+    edibleWeight = Math.max(0, quantity - parseFloat(item.bone_weight_g));
+  } else if (item.with_bones) {
+    edibleWeight = quantity * 0.7; // default 70% edible weight reduction
+  }
+
+  let cal = 0, p = 0, c = 0, f = 0;
+
+  if (item.type === 'manual' || item.food_type) {
+    if (item.manual_macros) {
+      return item.manual_macros;
+    }
+
+    const foodType = (item.food_type || '').toLowerCase();
+    let baseFood = FOODS_DB.find(fd => fd.name.toLowerCase().includes(foodType)) || 
+                   FOODS_DB.find(fd => foodType.includes(fd.name.toLowerCase()));
+    
+    if (!baseFood) {
+      if (foodType.includes('pork')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f14')!; // pork chop
+      } else if (foodType.includes('beef')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f5')!; // ground beef
+      } else if (foodType.includes('rice')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f7')!; // white rice
+      } else if (foodType.includes('egg')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f6')!; // egg
+      } else if (foodType.includes('fish') || foodType.includes('tilapia') || foodType.includes('bangus')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f9')!; // tilapia
+      } else {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f1')!; // default to chicken breast
       }
     }
-  } catch (_) {}
-  return config;
-});
 
-// ─── Response Interceptor ───────────────────────────────────────────────────
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    // No more 401 handling for tokens
-    return Promise.reject(error);
+    const multiplier = edibleWeight / 100;
+    cal = baseFood.calories_per_100g * multiplier;
+    p = baseFood.protein_per_100g * multiplier;
+    c = baseFood.carbs_per_100g * multiplier;
+    f = baseFood.fat_per_100g * multiplier;
+
+    // Cooking adjustments
+    const method = (item.method || item.cooking_method || 'raw').toLowerCase();
+    if (method === 'fried') {
+      f += 5 * multiplier;
+      cal += 45 * multiplier;
+    } else if (method === 'deep_fried') {
+      f += 10 * multiplier;
+      cal += 90 * multiplier;
+    } else if (method === 'sauteed') {
+      f += 3 * multiplier;
+      cal += 27 * multiplier;
+    }
+
+  } else if (item.type === 'food') {
+    const baseFood = FOODS_DB.find(fd => fd.id === item.id);
+    if (baseFood) {
+      const multiplier = edibleWeight / 100;
+      cal = baseFood.calories_per_100g * multiplier;
+      p = baseFood.protein_per_100g * multiplier;
+      c = baseFood.carbs_per_100g * multiplier;
+      f = baseFood.fat_per_100g * multiplier;
+
+      const method = (item.cooking_method || 'raw').toLowerCase();
+      if (method === 'fried') {
+        f += 5 * multiplier;
+        cal += 45 * multiplier;
+      } else if (method === 'deep_fried') {
+        f += 10 * multiplier;
+        cal += 90 * multiplier;
+      } else if (method === 'sauteed') {
+        f += 3 * multiplier;
+        cal += 27 * multiplier;
+      }
+    }
+  } else if (item.type === 'recipe') {
+    const baseRecipe = RECIPES_DB.find(rc => rc.id === item.id);
+    if (baseRecipe) {
+      const multiplier = edibleWeight / 100;
+      cal = (baseRecipe.macros_per_100g?.calories ?? 0) * multiplier;
+      p = (baseRecipe.macros_per_100g?.protein ?? 0) * multiplier;
+      c = (baseRecipe.macros_per_100g?.carbs ?? 0) * multiplier;
+      f = (baseRecipe.macros_per_100g?.fat ?? 0) * multiplier;
+    }
+  } else if (item.type === 'restaurant') {
+    const baseRest = RESTAURANT_DB.find(rt => rt.id === item.id);
+    if (baseRest) {
+      const multiplier = quantity / baseRest.serving_size_g;
+      cal = baseRest.calories * multiplier;
+      p = baseRest.protein * multiplier;
+      c = baseRest.carbs * multiplier;
+      f = baseRest.fat * multiplier;
+    }
   }
-);
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+  return { calories: cal, protein: p, carbs: c, fat: f };
+}
+
+// ─── API Mock Exports ─────────────────────────────────────────────────────────
+
 export const authApi = {
-  register: (payload: any) => api.post('/auth/register', payload),
-  login:    (email: string, password: string) => api.post('/auth/login', { email, password }),
-  me:       () => api.get('/auth/me'),
-  update:   (payload: any) => api.patch('/auth/profile', payload),
+  register: async (payload: any) => {
+    return { data: { token: 'mock-token', user: payload } };
+  },
+  login: async (email: string) => {
+    return { data: { token: 'mock-token', user: { email } } };
+  },
+  me: async () => {
+    const raw = await SecureStore.getItemAsync('coach_hoo_user_data');
+    return { data: raw ? JSON.parse(raw) : null };
+  },
+  update: async (payload: any) => {
+    const raw = await SecureStore.getItemAsync('coach_hoo_user_data');
+    const user = raw ? JSON.parse(raw) : {};
+    const next = { ...user, ...payload };
+    await SecureStore.setItemAsync('coach_hoo_user_data', JSON.stringify(next));
+    return { data: next };
+  },
 };
 
-// ─── Foods ────────────────────────────────────────────────────────────────────
 export const foodsApi = {
-  search:     (q: string, category?: string) =>
-    api.get('/foods/search', { params: { q, category, limit: 30 } }),
-  getById:    (id: string) => api.get(`/foods/${id}`),
-  categories: () => api.get('/foods/categories'),
-  create:     (payload: any) => api.post('/foods', payload),
+  search: async (q: string, category?: string) => {
+    const qc = (q || '').toLowerCase().trim();
+    let results = FOODS_DB;
+    if (qc) {
+      results = results.filter(f => f.name.toLowerCase().includes(qc));
+    }
+    if (category) {
+      results = results.filter(f => f.category === category);
+    }
+    return { data: { results } };
+  },
+  getById: async (id: string) => {
+    const food = FOODS_DB.find(f => f.id === id);
+    return { data: food };
+  },
+  categories: async () => {
+    const cats = Array.from(new Set(FOODS_DB.map(f => f.category)));
+    return { data: cats };
+  },
+  create: async (payload: any) => {
+    const newFood = { id: 'f_user_' + Math.random().toString(36).substring(7), ...payload };
+    FOODS_DB.push(newFood);
+    return { data: newFood };
+  },
 };
 
-// ─── Recipes ──────────────────────────────────────────────────────────────────
 export const recipesApi = {
-  list:     (country?: string, meal_type?: string) =>
-    api.get('/recipes', { params: { country, meal_type, limit: 30 } }),
-  search:   (q: string) => api.get('/recipes/search', { params: { q } }),
-  getById:  (id: string) => api.get(`/recipes/${id}`),
+  list: async (country?: string, meal_type?: string) => {
+    let list = RECIPES_DB;
+    if (country) list = list.filter(r => r.country === country);
+    if (meal_type) list = list.filter(r => r.meal_types.includes(meal_type));
+    return { data: list };
+  },
+  search: async (q: string) => {
+    const qc = (q || '').toLowerCase().trim();
+    let results = RECIPES_DB;
+    if (qc) {
+      results = results.filter(r => r.name.toLowerCase().includes(qc) || r.description?.toLowerCase().includes(qc));
+    }
+    return { data: { recipes: results } };
+  },
+  getById: async (id: string) => {
+    const recipe = RECIPES_DB.find(r => r.id === id);
+    return { data: recipe };
+  },
 };
 
-// ─── Meals ────────────────────────────────────────────────────────────────────
 export const mealsApi = {
-  log:    (payload: { meal_type: string; items: any[]; notes?: string; logged_date?: string }) =>
-    api.post('/meals/log', payload),
-  today:  (date?: string) => api.get('/meals/today', { params: { date } }),
-  delete: (id: string) => api.delete(`/meals/${id}`),
+  log: async (payload: { meal_type: string; items: any[]; notes?: string; logged_date?: string }) => {
+    let stored = await getLocalMeals();
+    
+    const processedItems = await Promise.all(payload.items.map(async (item) => {
+      const macros = await calculateItemMacros(item);
+      return {
+        id: 'mi_' + Math.random().toString(36).substring(7),
+        source_type: item.type,
+        source_id: item.id,
+        food_name: item.food_type || (await lookupFoodName(item.type, item.id)),
+        quantity_g: parseFloat(item.quantity_g),
+        cooking_method: item.method || item.cooking_method || 'raw',
+        with_bones: !!item.with_bones,
+        bone_weight_g: item.bone_weight_g !== undefined ? parseFloat(item.bone_weight_g) : undefined,
+        calculated_calories: macros.calories,
+        calculated_protein: macros.protein,
+        calculated_carbs: macros.carbs,
+        calculated_fat: macros.fat,
+      };
+    }));
+
+    const newMeal = {
+      id: 'm_' + Math.random().toString(36).substring(7),
+      user_id: 'local_user',
+      meal_type: payload.meal_type,
+      logged_date: payload.logged_date || new Date().toISOString().split('T')[0],
+      notes: payload.notes || '',
+      created_at: new Date().toISOString(),
+      items: processedItems,
+    };
+
+    stored.push(newMeal);
+    await saveLocalMeals(stored);
+
+    return { data: newMeal };
+  },
+
+  today: async (date?: string) => {
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const meals = await getLocalMeals();
+    const filteredMeals = meals.filter(m => m.logged_date === targetDate);
+
+    let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    filteredMeals.forEach(meal => {
+      meal.items.forEach((item: any) => {
+        totals.calories += item.calculated_calories || 0;
+        totals.protein += item.calculated_protein || 0;
+        totals.carbs += item.calculated_carbs || 0;
+        totals.fat += item.calculated_fat || 0;
+      });
+    });
+
+    let targets = null;
+    try {
+      const userData = await SecureStore.getItemAsync('coach_hoo_user_data');
+      if (userData) {
+        const user = JSON.parse(userData);
+        targets = calculateDailyTargets(user);
+      }
+    } catch (_) {}
+
+    let remaining = null;
+    if (targets) {
+      remaining = {
+        calories: Math.max(0, targets.calories_target - totals.calories),
+        protein: Math.max(0, targets.protein_target - totals.protein),
+        carbs: Math.max(0, targets.carbs_target - totals.carbs),
+        fat: Math.max(0, targets.fat_target - totals.fat),
+      };
+    }
+
+    return {
+      data: {
+        date: targetDate,
+        meals: filteredMeals,
+        totals,
+        targets,
+        remaining,
+      }
+    };
+  },
+
+  delete: async (id: string) => {
+    let stored = await getLocalMeals();
+    stored = stored.filter(m => m.id !== id);
+    await saveLocalMeals(stored);
+    return { data: { success: true } };
+  },
 };
 
-// ─── Calculate ────────────────────────────────────────────────────────────────
 export const calculateApi = {
-  macros: (items: any[]) => api.post('/calculate/macros', { items }),
+  macros: async (items: any[]) => {
+    let total_calories = 0;
+    let total_protein = 0;
+    let total_carbs = 0;
+    let total_fat = 0;
+
+    for (const item of items) {
+      const macros = await calculateItemMacros(item);
+      total_calories += macros.calories;
+      total_protein += macros.protein;
+      total_carbs += macros.carbs;
+      total_fat += macros.fat;
+    }
+
+    return {
+      data: {
+        total_calories,
+        total_protein,
+        total_carbs,
+        total_fat,
+      }
+    };
+  },
 };
 
-// ─── Recommend ────────────────────────────────────────────────────────────────
 export const recommendApi = {
-  meals:      (meal_type?: string, quantity?: number) =>
-    api.get('/recommend/meals', { params: { meal_type, quantity } }),
-  restaurant: (restaurant?: string) =>
-    api.get('/recommend/restaurant', { params: { restaurant } }),
+  meals: async (meal_type?: string, quantity?: number) => {
+    // Return a subset of RECIPES_DB as recommendations
+    let list = RECIPES_DB;
+    if (meal_type) {
+      list = list.filter(r => r.meal_types.includes(meal_type));
+    }
+    const limit = quantity || 3;
+    const recommendations = list.slice(0, limit).map((r, index) => {
+      const portion_g = 150;
+      const factor = portion_g / 100;
+      return {
+        id: r.id,
+        name: r.name,
+        country: r.country,
+        total_weight_g: r.total_weight_g,
+        description: r.description,
+        meal_types: r.meal_types,
+        macros_per_portion: {
+          portion_g,
+          calories: r.macros_per_100g.calories * factor,
+          protein: r.macros_per_100g.protein * factor,
+          carbs: r.macros_per_100g.carbs * factor,
+          fat: r.macros_per_100g.fat * factor,
+        },
+        remaining_after: { calories: 500, protein: 40, carbs: 50, fat: 15 },
+        fit_score: 95 - index * 5,
+      };
+    });
+    return { data: recommendations };
+  },
+
+  restaurant: async (restaurant?: string) => {
+    const qc = (restaurant || '').toLowerCase().trim();
+    let items = RESTAURANT_DB;
+    if (qc) {
+      items = items.filter(rt => rt.restaurant_name.toLowerCase().includes(qc) || rt.name.toLowerCase().includes(qc));
+    }
+    return { data: { items } };
+  },
+};
+
+const api = {
+  get: async (url: string, config?: any) => {
+    console.log('[Mock GET]', url, config);
+    return { data: {} };
+  },
+  post: async (url: string, data?: any) => {
+    console.log('[Mock POST]', url, data);
+    return { data: {} };
+  },
 };
 
 export default api;

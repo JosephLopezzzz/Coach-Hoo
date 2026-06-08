@@ -27,7 +27,7 @@ function ItemRow({ item }: { item: MealItem }) {
         <Text style={styles.itemMeta}>
           {item.quantity_g}g
           {item.cooking_method && item.cooking_method !== 'raw' ? ` · ${item.cooking_method}` : ''}
-          {item.with_bones ? ' · with bones' : ''}
+          {item.bone_weight_g && item.bone_weight_g > 0 ? ` · 🦴 ${item.bone_weight_g}g bones` : (item.with_bones ? ' · with bones' : '')}
         </Text>
       </View>
       <Text style={styles.itemCal}>{Math.round(item.calculated_calories ?? 0)} kcal</Text>

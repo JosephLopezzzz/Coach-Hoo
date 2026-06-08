@@ -34,7 +34,7 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
   let carbs    = 0;
   let fat      = 0;
   let badge    = '';
-  let badgeColor = Colors.primary;
+  let badgeColor: string = Colors.primary;
 
   if (item.source === 'food') {
     const f = item.data as Food;

@@ -90,6 +90,7 @@ export interface MealItem {
   quantity_g: number;
   cooking_method: string;
   with_bones: boolean;
+  bone_weight_g?: number;
   calculated_calories?: number;
   calculated_protein?: number;
   calculated_carbs?: number;
@@ -137,6 +138,7 @@ export interface LogFoodItem {
   quantity_g: number;
   cooking_method?: string;
   with_bones?: boolean;
+  bone_weight_g?: number;
 }
 
 export interface LogRecipeItem {
@@ -157,6 +159,7 @@ export interface LogManualItem {
   method?: string;
   quantity_g: number;
   with_bones?: boolean;
+  bone_weight_g?: number;
 }
 
 export type LogItem = LogFoodItem | LogRecipeItem | LogRestaurantItem | LogManualItem;

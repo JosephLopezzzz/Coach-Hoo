@@ -5,17 +5,17 @@
     "scheme": "coachhoo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "icon": "./assets/logo.jpg",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/appIcon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0E1A"
+      "backgroundColor": "#FAF6EE"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.jpg",
-        "backgroundColor": "#0A0E1A"
+        "foregroundImage": "./assets/appIcon.png",
+        "backgroundColor": "#FAF6EE"
       },
       "package": "com.coachhoo.app"
     },

@@ -29,7 +29,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <MealProvider>
-        <StatusBar style="light" backgroundColor={Colors.bg} />
+        <StatusBar style="dark" backgroundColor={Colors.bg} />
         <RootLayoutNav />
       </MealProvider>
     </AuthProvider>

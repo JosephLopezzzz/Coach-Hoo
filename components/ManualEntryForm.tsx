@@ -65,7 +65,8 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [foodType,      setFoodType]      = useState('chicken');
   const [cookingMethod, setCookingMethod] = useState('raw');
   const [grams,         setGrams]         = useState('100');
-  const [withBones,     setWithBones]     = useState(false);
+  const [hasBones,      setHasBones]      = useState(false);
+  const [boneWeight,    setBoneWeight]    = useState('');
   const [showMacros,    setShowMacros]    = useState(false);
   const [macros,        setMacros]        = useState({ cal: '', p: '', c: '', f: '' });
   const [error,         setError]         = useState('');
@@ -81,7 +82,8 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       food_type:  foodType.trim(),
       method:     cookingMethod,
       quantity_g: quantity,
-      with_bones: withBones,
+      with_bones: hasBones,
+      bone_weight_g: hasBones ? (parseFloat(boneWeight) || 0) : undefined,
     };
 
     if (showMacros) {
@@ -143,17 +145,32 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         ))}
       </View>
 
-      <View style={styles.bonesRow}>
-        <View>
-          <Text style={styles.sectionLabel}>With Bones?</Text>
-          <Text style={styles.bonesHint}>Applies 70% edible weight reduction</Text>
+      <View style={styles.bonesContainer}>
+        <View style={styles.bonesRow}>
+          <View>
+            <Text style={styles.sectionLabel}>Has Bones?</Text>
+            <Text style={styles.bonesHint}>Input the weight of the bones in grams</Text>
+          </View>
+          <Switch
+            value={hasBones}
+            onValueChange={setHasBones}
+            trackColor={{ false: Colors.border, true: Colors.primary }}
+            thumbColor={Colors.textPrimary}
+          />
         </View>
-        <Switch
-          value={withBones}
-          onValueChange={setWithBones}
-          trackColor={{ false: Colors.border, true: Colors.primary }}
-          thumbColor={Colors.textPrimary}
-        />
+        {hasBones && (
+          <View style={styles.boneWeightInputRow}>
+            <Text style={styles.boneWeightLabel}>Bone Weight (grams)</Text>
+            <TextInput
+              style={styles.boneInput}
+              keyboardType="decimal-pad"
+              placeholder="e.g. 20"
+              placeholderTextColor={Colors.textMuted}
+              value={boneWeight}
+              onChangeText={setBoneWeight}
+            />
+          </View>
+        )}
       </View>
 
       <View style={styles.macrosToggleRow}>
@@ -226,7 +243,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   chipTextSelected: {
-    color: Colors.textPrimary,
+    color: Colors.textInverse,
     fontWeight: FontWeight.semibold,
   },
   input: {
@@ -263,19 +280,48 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: FontWeight.bold,
   },
-  bonesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  bonesContainer: {
     backgroundColor: Colors.bgElevated,
     padding: Spacing.md,
     borderRadius: Radius.md,
     marginTop: 4,
+    gap: 8,
+  },
+  bonesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   bonesHint: {
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  boneWeightInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  boneWeightLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  boneInput: {
+    backgroundColor: Colors.bgInput,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
+    width: 100,
+    textAlign: 'right',
   },
   macrosToggleRow: {
     flexDirection: 'row',

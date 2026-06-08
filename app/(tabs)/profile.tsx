@@ -60,7 +60,7 @@ export default function ProfileScreen() {
             {user.full_name?.[0]?.toUpperCase() ?? 'H'}
           </Text>
         </View>
-        <Text style={styles.userName}>{user.full_name ?? 'Coach Hoo User'}</Text>
+        <Text style={styles.userName}>{user.full_name ?? 'Pip Health User'}</Text>
         <View style={[styles.goalBadge, { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary }]}>
           <Text style={styles.goalBadgeText}>
             {user.goal === 'lose' ? '🔥 Lose Weight' : user.goal === 'gain' ? '💪 Gain Muscle' : '⚖️ Maintain'}
@@ -122,7 +122,7 @@ export default function ProfileScreen() {
       </Pressable>
 
 
-      <Text style={styles.version}>Coach Hoo v1.0.0 · Built for 🇵🇭</Text>
+      <Text style={styles.version}>Pip Health v1.0.0 · Built for 🇵🇭</Text>
     </ScrollView>
   );
 }

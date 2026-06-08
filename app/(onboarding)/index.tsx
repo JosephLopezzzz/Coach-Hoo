@@ -78,11 +78,13 @@ export default function OnboardingScreen() {
         
         {/* Header / Mascot */}
         <View style={styles.header}>
-          <Image 
-            source={require('../../assets/mascot-icon.png')} 
-            style={styles.mascot}
-            resizeMode="contain"
-          />
+          <View style={styles.mascotWrapper}>
+            <Image 
+              source={require('../../assets/mascot/idle.png')} 
+              style={styles.mascot}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={styles.welcomeText}>
             {step === 1 ? "Let's get started!" : 
              step === 2 ? "Tell us about yourself" : 
@@ -138,22 +140,22 @@ export default function OnboardingScreen() {
                 <Pressable 
                   style={[
                     styles.sexBtn, 
-                    formData.sex === 'male' && { backgroundColor: '#4DA6FF20', borderColor: '#4DA6FF' }
+                    formData.sex === 'male' && { backgroundColor: `${Colors.accent}20`, borderColor: Colors.accent }
                   ]}
                   onPress={() => setFormData({ ...formData, sex: 'male' })}
                 >
-                  <Ionicons name="male" size={24} color={formData.sex === 'male' ? '#4DA6FF' : Colors.textMuted} />
-                  <Text style={[styles.sexText, formData.sex === 'male' && { color: '#4DA6FF' }]}>Male</Text>
+                  <Ionicons name="male" size={24} color={formData.sex === 'male' ? Colors.accent : Colors.textMuted} />
+                  <Text style={[styles.sexText, formData.sex === 'male' && { color: Colors.accent }]}>Male</Text>
                 </Pressable>
                 <Pressable 
                   style={[
                     styles.sexBtn, 
-                    formData.sex === 'female' && { backgroundColor: '#FF6B9D20', borderColor: '#FF6B9D' }
+                    formData.sex === 'female' && { backgroundColor: `${Colors.protein}20`, borderColor: Colors.protein }
                   ]}
                   onPress={() => setFormData({ ...formData, sex: 'female' })}
                 >
-                  <Ionicons name="female" size={24} color={formData.sex === 'female' ? '#FF6B9D' : Colors.textMuted} />
-                  <Text style={[styles.sexText, formData.sex === 'female' && { color: '#FF6B9D' }]}>Female</Text>
+                  <Ionicons name="female" size={24} color={formData.sex === 'female' ? Colors.protein : Colors.textMuted} />
+                  <Text style={[styles.sexText, formData.sex === 'female' && { color: Colors.protein }]}>Female</Text>
                 </Pressable>
               </View>
             </View>
@@ -257,9 +259,17 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
-  scroll: { flexGrow: 1, padding: Spacing.xl, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: Spacing.xxl },
-  mascot: { width: 120, height: 120, marginBottom: Spacing.md },
+  scroll: { flexGrow: 1, padding: Spacing.xl, paddingTop: Spacing.xxl, justifyContent: 'center' },
+  header: { alignItems: 'center', marginBottom: Spacing.md },
+  mascotWrapper: {
+    width: 220,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: -20,
+    zIndex: 10,
+  },
+  mascot: { width: 220, height: 220 },
   welcomeText: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary, textAlign: 'center' },
   progressContainer: { flexDirection: 'row', gap: 8, marginTop: Spacing.lg },
   progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.bgElevated },
@@ -281,7 +291,7 @@ const styles = StyleSheet.create({
   goalBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
   goalText: { flex: 1, fontSize: FontSize.md, color: Colors.textSecondary, fontWeight: FontWeight.medium },
   goalTextActive: { color: Colors.textPrimary, fontWeight: FontWeight.bold },
-  footer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.xl, gap: Spacing.md },
+  footer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.md, gap: Spacing.md },
   backBtn: { height: 56, justifyContent: 'center', paddingHorizontal: Spacing.lg },
   backBtnText: { color: Colors.textSecondary, fontSize: FontSize.md, fontWeight: FontWeight.semibold },
   nextBtn: { height: 56, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },

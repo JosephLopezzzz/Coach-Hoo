@@ -36,6 +36,10 @@ export default function TabLayout() {
         options={{ title: 'Dashboard', tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} /> }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{ title: 'Coach Hoo', tabBarIcon: ({ focused }) => <TabIcon name="chatbubbles" focused={focused} /> }}
+      />
+      <Tabs.Screen
         name="search"
         options={{ title: 'Search', tabBarIcon: ({ focused }) => <TabIcon name="search" focused={focused} /> }}
       />

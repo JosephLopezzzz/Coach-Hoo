@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  RefreshControl, ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../context/MealContext';
 import { useAuth } from '../../context/AuthContext';
-import MacroRing from '../../components/MacroRing';
 import MacroBar from '../../components/MacroBar';
 import MealSection from '../../components/MealSection';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
@@ -42,20 +41,6 @@ export default function DashboardScreen() {
         </Pressable>
       </View>
 
-      {/* Macro ring */}
-      <View style={styles.ringCard}>
-        <Text style={styles.sectionTitle}>Daily Progress</Text>
-        {isLoading && !totals.calories ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
-        ) : (
-          <MacroRing
-            calories={totals.calories}   caloriesTarget={caloriesTarget}
-            protein={totals.protein}     proteinTarget={proteinTarget}
-            carbs={totals.carbs}         carbsTarget={carbsTarget}
-            fat={totals.fat}             fatTarget={fatTarget}
-          />
-        )}
-      </View>
 
       {/* Macro bars */}
       <View style={styles.card}>
@@ -130,14 +115,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
-  },
-  ringCard: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   card: {
     backgroundColor: Colors.bgCard,
