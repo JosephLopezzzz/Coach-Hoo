@@ -130,7 +130,13 @@ export default function ChatScreen() {
     const gramMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:g|grams)\b/);
     if (!gramMatch) {
       // Check if they mentioned a food keyword but forgot weight in grams
-      const foodKeywords = ['pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid', 'adobo', 'sinigang', 'tinola', 'kare-kare', 'food', 'eat', 'ate', 'meal', 'lunch', 'breakfast', 'dinner', 'snack'];
+      const foodKeywords = [
+        'pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid',
+        'adobo', 'sinigang', 'tinola', 'kare-kare', 'food', 'eat', 'ate', 'meal', 'lunch', 'breakfast',
+        'dinner', 'snack', 'milk', 'juice', 'soda', 'coke', 'coffee', 'tea', 'drink', 'beverage',
+        'shake', 'water', 'broccoli', 'spinach', 'kangkong', 'cabbage', 'potato', 'vegetable',
+        'banana', 'apple', 'mango', 'avocado', 'orange', 'calamansi', 'fruit'
+      ];
       for (const kw of foodKeywords) {
         if (clean.includes(kw)) {
           return { type: 'missing_grams', foodKeyword: kw };
@@ -205,7 +211,12 @@ export default function ChatScreen() {
     // Fallback to manual food type keyword
     if (!matchedItem) {
       let foodType = 'chicken';
-      const foodKeywords = ['pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid', 'adobo', 'sinigang', 'tinola', 'kare-kare'];
+      const foodKeywords = [
+        'pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid',
+        'adobo', 'sinigang', 'tinola', 'kare-kare', 'milk', 'juice', 'soda', 'coke', 'coffee', 'tea',
+        'drink', 'beverage', 'shake', 'water', 'broccoli', 'spinach', 'kangkong', 'cabbage', 'potato',
+        'vegetable', 'banana', 'apple', 'mango', 'avocado', 'orange', 'calamansi', 'fruit'
+      ];
       for (const kw of foodKeywords) {
         if (clean.includes(kw)) {
           foodType = kw;

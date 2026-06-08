@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Core Offline Databases ───────────────────────────────────────────────────
 
@@ -18,6 +19,21 @@ export const FOODS_DB = [
   { id: 'f13', name: 'Squid', category: 'seafood', calories_per_100g: 92, protein_per_100g: 16, carbs_per_100g: 3, fat_per_100g: 1.4, is_raw: true, source: 'USDA' },
   { id: 'f14', name: 'Pork Chop', category: 'pork', calories_per_100g: 231, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 14, is_raw: true, source: 'USDA' },
   { id: 'f15', name: 'Beef Ribeye', category: 'beef', calories_per_100g: 291, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 22, is_raw: true, source: 'USDA' },
+  { id: 'f16', name: 'Milk (Whole)', category: 'beverages', calories_per_100g: 61, protein_per_100g: 3.2, carbs_per_100g: 4.8, fat_per_100g: 3.3, is_raw: false, source: 'USDA' },
+  { id: 'f17', name: 'Soda (Coke)', category: 'beverages', calories_per_100g: 38, protein_per_100g: 0, carbs_per_100g: 9.8, fat_per_100g: 0, is_raw: false, source: 'USDA' },
+  { id: 'f18', name: 'Black Coffee', category: 'beverages', calories_per_100g: 2, protein_per_100g: 0.3, carbs_per_100g: 0, fat_per_100g: 0, is_raw: false, source: 'USDA' },
+  { id: 'f19', name: 'Orange Juice', category: 'beverages', calories_per_100g: 45, protein_per_100g: 0.7, carbs_per_100g: 10.4, fat_per_100g: 0.2, is_raw: false, source: 'USDA' },
+  { id: 'f20', name: 'Whey Protein Shake', category: 'beverages', calories_per_100g: 80, protein_per_100g: 16, carbs_per_100g: 1.5, fat_per_100g: 1, is_raw: false, source: 'USDA' },
+  { id: 'f21', name: 'Broccoli', category: 'vegetables', calories_per_100g: 34, protein_per_100g: 2.8, carbs_per_100g: 7, fat_per_100g: 0.4, is_raw: true, source: 'USDA' },
+  { id: 'f22', name: 'Spinach', category: 'vegetables', calories_per_100g: 23, protein_per_100g: 2.9, carbs_per_100g: 3.6, fat_per_100g: 0.4, is_raw: true, source: 'USDA' },
+  { id: 'f23', name: 'Kangkong', category: 'vegetables', calories_per_100g: 19, protein_per_100g: 2.6, carbs_per_100g: 3.1, fat_per_100g: 0.2, is_raw: true, source: 'FNRI' },
+  { id: 'f24', name: 'Potato', category: 'vegetables', calories_per_100g: 87, protein_per_100g: 2, carbs_per_100g: 20, fat_per_100g: 0.1, is_raw: true, source: 'USDA' },
+  { id: 'f25', name: 'Cabbage', category: 'vegetables', calories_per_100g: 25, protein_per_100g: 1.3, carbs_per_100g: 6, fat_per_100g: 0.1, is_raw: true, source: 'USDA' },
+  { id: 'f26', name: 'Banana', category: 'fruits', calories_per_100g: 89, protein_per_100g: 1.1, carbs_per_100g: 23, fat_per_100g: 0.3, is_raw: false, source: 'USDA' },
+  { id: 'f27', name: 'Apple', category: 'fruits', calories_per_100g: 52, protein_per_100g: 0.3, carbs_per_100g: 14, fat_per_100g: 0.2, is_raw: false, source: 'USDA' },
+  { id: 'f28', name: 'Mango', category: 'fruits', calories_per_100g: 60, protein_per_100g: 0.8, carbs_per_100g: 15, fat_per_100g: 0.4, is_raw: false, source: 'USDA' },
+  { id: 'f29', name: 'Avocado', category: 'fruits', calories_per_100g: 160, protein_per_100g: 2, carbs_per_100g: 9, fat_per_100g: 15, is_raw: false, source: 'USDA' },
+  { id: 'f30', name: 'Calamansi', category: 'fruits', calories_per_100g: 30, protein_per_100g: 0.5, carbs_per_100g: 7, fat_per_100g: 0.1, is_raw: false, source: 'FNRI' },
 ];
 
 export const RECIPES_DB = [
@@ -41,7 +57,7 @@ export const RESTAURANT_DB = [
 
 async function getLocalMeals(): Promise<any[]> {
   try {
-    const raw = await SecureStore.getItemAsync('coach_hoo_logged_meals');
+    const raw = await AsyncStorage.getItem('coach_hoo_logged_meals');
     return raw ? JSON.parse(raw) : [];
   } catch (err) {
     console.error('Failed to parse meals:', err);
@@ -51,15 +67,36 @@ async function getLocalMeals(): Promise<any[]> {
 
 async function saveLocalMeals(meals: any[]) {
   try {
-    await SecureStore.setItemAsync('coach_hoo_logged_meals', JSON.stringify(meals));
+    await AsyncStorage.setItem('coach_hoo_logged_meals', JSON.stringify(meals));
   } catch (err) {
     console.error('Failed to save meals:', err);
   }
 }
 
+async function getCustomFoods(): Promise<any[]> {
+  try {
+    const raw = await AsyncStorage.getItem('coach_hoo_custom_foods');
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('Failed to parse custom foods:', err);
+    return [];
+  }
+}
+
+async function saveCustomFood(newFood: any) {
+  try {
+    const existing = await getCustomFoods();
+    existing.push(newFood);
+    await AsyncStorage.setItem('coach_hoo_custom_foods', JSON.stringify(existing));
+  } catch (err) {
+    console.error('Failed to save custom food:', err);
+  }
+}
+
 async function lookupFoodName(type: string, id: string): Promise<string> {
   if (type === 'food') {
-    return FOODS_DB.find(fd => fd.id === id)?.name ?? 'Food Item';
+    const custom = await getCustomFoods();
+    return [...FOODS_DB, ...custom].find(fd => fd.id === id)?.name ?? 'Food Item';
   }
   if (type === 'recipe') {
     return RECIPES_DB.find(rc => rc.id === id)?.name ?? 'Recipe Item';
@@ -127,8 +164,10 @@ export async function calculateItemMacros(item: any) {
     }
 
     const foodType = (item.food_type || '').toLowerCase();
-    let baseFood = FOODS_DB.find(fd => fd.name.toLowerCase().includes(foodType)) || 
-                   FOODS_DB.find(fd => foodType.includes(fd.name.toLowerCase()));
+    const customFoods = await getCustomFoods();
+    const allFoods = [...FOODS_DB, ...customFoods];
+    let baseFood = allFoods.find(fd => fd.name.toLowerCase().includes(foodType)) || 
+                   allFoods.find(fd => foodType.includes(fd.name.toLowerCase()));
     
     if (!baseFood) {
       if (foodType.includes('pork')) {
@@ -139,8 +178,14 @@ export async function calculateItemMacros(item: any) {
         baseFood = FOODS_DB.find(fd => fd.id === 'f7')!; // white rice
       } else if (foodType.includes('egg')) {
         baseFood = FOODS_DB.find(fd => fd.id === 'f6')!; // egg
-      } else if (foodType.includes('fish') || foodType.includes('tilapia') || foodType.includes('bangus')) {
+      } else if (foodType.includes('fish') || foodType.includes('tilapia') || foodType.includes('bangus') || foodType.includes('seafood') || foodType.includes('shrimp') || foodType.includes('squid')) {
         baseFood = FOODS_DB.find(fd => fd.id === 'f9')!; // tilapia
+      } else if (foodType.includes('milk') || foodType.includes('drink') || foodType.includes('juice') || foodType.includes('beverage') || foodType.includes('coffee') || foodType.includes('soda') || foodType.includes('coke') || foodType.includes('shake') || foodType.includes('water') || foodType.includes('tea')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f16')!; // default to whole milk
+      } else if (foodType.includes('vegetable') || foodType.includes('broccoli') || foodType.includes('spinach') || foodType.includes('kangkong') || foodType.includes('cabbage') || foodType.includes('salad') || foodType.includes('potato')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f21')!; // default to broccoli
+      } else if (foodType.includes('fruit') || foodType.includes('banana') || foodType.includes('apple') || foodType.includes('mango') || foodType.includes('avocado') || foodType.includes('orange') || foodType.includes('calamansi')) {
+        baseFood = FOODS_DB.find(fd => fd.id === 'f26')!; // default to banana
       } else {
         baseFood = FOODS_DB.find(fd => fd.id === 'f1')!; // default to chicken breast
       }
@@ -166,7 +211,8 @@ export async function calculateItemMacros(item: any) {
     }
 
   } else if (item.type === 'food') {
-    const baseFood = FOODS_DB.find(fd => fd.id === item.id);
+    const customFoods = await getCustomFoods();
+    const baseFood = [...FOODS_DB, ...customFoods].find(fd => fd.id === item.id);
     if (baseFood) {
       const multiplier = edibleWeight / 100;
       cal = baseFood.calories_per_100g * multiplier;
@@ -234,7 +280,8 @@ export const authApi = {
 export const foodsApi = {
   search: async (q: string, category?: string) => {
     const qc = (q || '').toLowerCase().trim();
-    let results = FOODS_DB;
+    const customFoods = await getCustomFoods();
+    let results = [...FOODS_DB, ...customFoods];
     if (qc) {
       results = results.filter(f => f.name.toLowerCase().includes(qc));
     }
@@ -244,17 +291,34 @@ export const foodsApi = {
     return { data: { results } };
   },
   getById: async (id: string) => {
-    const food = FOODS_DB.find(f => f.id === id);
+    const customFoods = await getCustomFoods();
+    const food = [...FOODS_DB, ...customFoods].find(f => f.id === id);
     return { data: food };
   },
   categories: async () => {
-    const cats = Array.from(new Set(FOODS_DB.map(f => f.category)));
+    const customFoods = await getCustomFoods();
+    const cats = Array.from(new Set([...FOODS_DB, ...customFoods].map(f => f.category)));
     return { data: cats };
   },
   create: async (payload: any) => {
     const newFood = { id: 'f_user_' + Math.random().toString(36).substring(7), ...payload };
-    FOODS_DB.push(newFood);
+    await saveCustomFood(newFood);  // Persisted to AsyncStorage!
     return { data: newFood };
+  },
+  listCustomFoods: async () => {
+    const custom = await getCustomFoods();
+    return { data: custom };
+  },
+  deleteCustomFood: async (id: string) => {
+    try {
+      const existing = await getCustomFoods();
+      const updated = existing.filter(f => f.id !== id);
+      await AsyncStorage.setItem('coach_hoo_custom_foods', JSON.stringify(updated));
+      return { data: { success: true } };
+    } catch (err) {
+      console.error('Failed to delete custom food:', err);
+      return { data: { success: false } };
+    }
   },
 };
 
