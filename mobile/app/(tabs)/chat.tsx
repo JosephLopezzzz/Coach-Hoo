@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, FlatList,
   Pressable, KeyboardAvoidingView, Platform, Image,
-  Animated, Keyboard, ActivityIndicator, ScrollView,
+  Animated, Keyboard, ActivityIndicator, ScrollView, Modal, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useMeals } from '../../context/MealContext';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
@@ -48,6 +49,15 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function ChatScreen() {
+  // State for simulated OCR scanner
+  const [ocrModalVisible, setOcrModalVisible] = useState(false);
+  const [scannedName, setScannedName] = useState('');
+  const [scannedCals, setScannedCals] = useState('');
+  const [scannedProtein, setScannedProtein] = useState('');
+  const [scannedCarbs, setScannedCarbs] = useState('');
+  const [scannedFat, setScannedFat] = useState('');
+  const [scannedMealType, setScannedMealType] = useState('snack');
+
   const { logMeal, deleteMeal, totals, targets, remaining, meals } = useMeals();
   const { user } = useAuth();
   
@@ -560,6 +570,75 @@ export default function ChatScreen() {
     }, 1500);
   };
 
+  const handleScanNutrition = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Denied', 'Camera access is required to scan nutrition facts.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.5 });
+    if (!result.canceled) {
+      Alert.alert(
+        'Simulated OCR',
+        'In a production app with a backend server, we would run AI OCR here to extract macros from the nutrition label. For now, please input the macros manually!',
+        [
+          { text: 'OK', onPress: () => {
+              setScannedName('');
+              setScannedCals(''); setScannedProtein(''); setScannedCarbs(''); setScannedFat('');
+              setScannedMealType('snack');
+              setOcrModalVisible(true);
+          }}
+        ]
+      );
+    }
+  };
+
+  const handleSubmitOcr = async () => {
+    if (!scannedName) return Alert.alert('Error', 'Food name is required');
+    const c = parseFloat(scannedCals) || 0;
+    const p = parseFloat(scannedProtein) || 0;
+    const cb = parseFloat(scannedCarbs) || 0;
+    const f = parseFloat(scannedFat) || 0;
+
+    setOcrModalVisible(false);
+
+    // Send user message
+    const userMsg: Message = { id: Math.random().toString(), sender: 'user', text: `📸 Scanned Nutrition Facts: ${scannedName}`, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsTyping(true);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      await logMeal(scannedMealType, [{
+        type: 'manual',
+        id: 'manual',
+        quantity_g: 100, // Normalized to 1 serving
+        food_type: scannedName,
+        cooking_method: 'raw',
+        with_bones: false,
+        manual_macros: { calories: c, protein: p, carbs: cb, fat: f }
+      }]);
+
+      setTimeout(() => {
+        const coachMsg: Message = {
+          id: Math.random().toString(),
+          sender: 'coach',
+          text: `Bawk! Successfully logged your scanned item **${scannedName}** to your **${scannedMealType}**! 🐔🎉\n\n🔥 **Calories**: ${c} kcal\n💪 **Protein**: ${p}g\n🌾 **Carbs**: ${cb}g\n🥑 **Fat**: ${f}g`,
+          timestamp: new Date(),
+          mascotState: p > 15 ? 'flex' : 'streak',
+        };
+        setMessages((prev) => [...prev, coachMsg]);
+        setIsTyping(false);
+        changeMascotState(p > 15 ? 'flex' : 'streak', 'Logged scan!');
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      }, 1500);
+
+    } catch (err: any) {
+      setIsTyping(false);
+      Alert.alert('Error', 'Failed to log scanned meal');
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isCoach = item.sender === 'coach';
     return (
@@ -645,6 +724,9 @@ export default function ChatScreen() {
 
       {/* Message Input Bar */}
       <View style={styles.inputContainer}>
+        <Pressable style={styles.attachBtn} onPress={handleScanNutrition}>
+          <Ionicons name="camera" size={24} color={Colors.textMuted} />
+        </Pressable>
         <TextInput
           style={styles.input}
           placeholder="Chat or type what you ate to log..."
@@ -662,6 +744,50 @@ export default function ChatScreen() {
           <Ionicons name="send" size={18} color={Colors.textInverse} />
         </Pressable>
       </View>
+
+      {/* OCR Manual Entry Modal */}
+      <Modal visible={ocrModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Scanned Nutrition Facts</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.inputLabel}>Food Name</Text>
+              <TextInput style={styles.modalInput} placeholder="e.g. Protein Bar" placeholderTextColor={Colors.textMuted} value={scannedName} onChangeText={setScannedName} />
+
+              <Text style={styles.inputLabel}>Meal Type</Text>
+              <View style={styles.mealTypeChips}>
+                {['breakfast', 'lunch', 'dinner', 'snack'].map(type => (
+                  <Pressable key={type} style={[styles.mealTypeChip, scannedMealType === type && styles.mealTypeChipActive]} onPress={() => setScannedMealType(type)}>
+                    <Text style={[styles.mealTypeChipText, scannedMealType === type && styles.mealTypeChipTextActive]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Calories</Text>
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCals} onChangeText={setScannedCals} />
+
+              <Text style={styles.inputLabel}>Protein (g)</Text>
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedProtein} onChangeText={setScannedProtein} />
+
+              <Text style={styles.inputLabel}>Carbs (g)</Text>
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCarbs} onChangeText={setScannedCarbs} />
+
+              <Text style={styles.inputLabel}>Fat (g)</Text>
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedFat} onChangeText={setScannedFat} />
+
+              <View style={styles.modalBtnRow}>
+                <Pressable style={styles.modalCancelBtn} onPress={() => setOcrModalVisible(false)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.modalSaveBtn} onPress={handleSubmitOcr}>
+                  <Text style={styles.modalSaveText}>Log to Meal</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -861,8 +987,33 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 8,
   },
   sendBtnDisabled: {
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.bgElevated,
+    borderColor: Colors.border,
   },
+  attachBtn: {
+    padding: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // OCR Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: Colors.bgCard, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, maxHeight: '80%' },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.md },
+  modalScroll: { gap: Spacing.sm },
+  inputLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium, marginTop: 4 },
+  modalInput: { backgroundColor: Colors.bgInput, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, color: Colors.textPrimary, fontSize: FontSize.md },
+  mealTypeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  mealTypeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bgInput },
+  mealTypeChipActive: { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary },
+  mealTypeChipText: { fontSize: FontSize.sm, color: Colors.textSecondary },
+  mealTypeChipTextActive: { color: Colors.primary, fontWeight: FontWeight.bold },
+  modalBtnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  modalCancelBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.bgElevated },
+  modalCancelText: { color: Colors.textPrimary, fontWeight: FontWeight.bold },
+  modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.primary },
+  modalSaveText: { color: Colors.textInverse, fontWeight: FontWeight.bold },
 });

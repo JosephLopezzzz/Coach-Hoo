@@ -51,14 +51,7 @@ export const RECIPES_DB = [
   { id: 'r5', name: 'Chicken Inasal', country: 'PH', total_weight_g: 300, description: 'Ilonggo-style grilled chicken marinated in calamansi, lemongrass, and annatto', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 195, protein: 24, carbs: 1, fat: 10 }, ingredients: [{name: 'Chicken Leg', base_qty_g: 250}, {name: 'Calamansi', base_qty_g: 20}, {name: 'Lemongrass', base_qty_g: 10}, {name: 'Annatto Oil', base_qty_g: 20}] },
 ];
 
-export const RESTAURANT_DB = [
-  { id: 'rt1', name: 'Jollibee 1pc Chickenjoy', restaurant_name: 'Jollibee', serving_size_g: 120, calories: 360, protein: 22, carbs: 12, fat: 24, country: 'PH' },
-  { id: 'rt2', name: 'Jollibee Peach Mango Pie', restaurant_name: 'Jollibee', serving_size_g: 80, calories: 270, protein: 3, carbs: 35, fat: 13, country: 'PH' },
-  { id: 'rt3', name: 'Jollibee Jolly Spaghetti', restaurant_name: 'Jollibee', serving_size_g: 220, calories: 400, protein: 12, carbs: 62, fat: 11, country: 'PH' },
-  { id: 'rt4', name: "McDonald's French Fries (Medium)", restaurant_name: "McDonald's", serving_size_g: 117, calories: 320, protein: 4, carbs: 43, fat: 15, country: 'US' },
-  { id: 'rt5', name: "McDonald's Big Mac", restaurant_name: "McDonald's", serving_size_g: 220, calories: 540, protein: 25, carbs: 46, fat: 28, country: 'US' },
-  { id: 'rt6', name: 'KFC 1pc Original Recipe Chicken', restaurant_name: 'KFC', serving_size_g: 125, calories: 320, protein: 19, carbs: 8, fat: 23, country: 'US' },
-];
+// Removed hardcoded RESTAURANT_DB as per user request to allow custom scanning/adding
 
 // ─── Local Helpers ────────────────────────────────────────────────────────────
 
@@ -100,6 +93,46 @@ async function saveCustomFood(newFood: any) {
   }
 }
 
+async function deleteCustomFood(id: string) {
+  try {
+    const existing = await getCustomFoods();
+    const updated = existing.filter((f: any) => f.id !== id);
+    await AsyncStorage.setItem('coach_hoo_custom_foods', JSON.stringify(updated));
+  } catch (err) {
+    console.error('Failed to delete custom food:', err);
+  }
+}
+
+async function getCustomFastFoods(): Promise<any[]> {
+  try {
+    const raw = await AsyncStorage.getItem('coach_hoo_custom_fast_foods');
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('Failed to parse custom fast foods:', err);
+    return [];
+  }
+}
+
+async function saveCustomFastFood(newFood: any) {
+  try {
+    const existing = await getCustomFastFoods();
+    existing.push(newFood);
+    await AsyncStorage.setItem('coach_hoo_custom_fast_foods', JSON.stringify(existing));
+  } catch (err) {
+    console.error('Failed to save custom fast food:', err);
+  }
+}
+
+async function deleteCustomFastFood(id: string) {
+  try {
+    const existing = await getCustomFastFoods();
+    const updated = existing.filter((f: any) => f.id !== id);
+    await AsyncStorage.setItem('coach_hoo_custom_fast_foods', JSON.stringify(updated));
+  } catch (err) {
+    console.error('Failed to delete custom fast food:', err);
+  }
+}
+
 async function lookupFoodName(type: string, id: string): Promise<string> {
   if (type === 'food') {
     const custom = await getCustomFoods();
@@ -109,7 +142,8 @@ async function lookupFoodName(type: string, id: string): Promise<string> {
     return RECIPES_DB.find(rc => rc.id === id)?.name ?? 'Recipe Item';
   }
   if (type === 'restaurant') {
-    return RESTAURANT_DB.find(rt => rt.id === id)?.name ?? 'Fast Food Item';
+    const customFF = await getCustomFastFoods();
+    return customFF.find((rt: any) => rt.id === id)?.name ?? 'Fast Food Item';
   }
   return 'Food';
 }
@@ -543,11 +577,23 @@ export const recommendApi = {
 
   restaurant: async (restaurant?: string) => {
     const qc = (restaurant || '').toLowerCase().trim();
-    let items = RESTAURANT_DB;
+    const customFF = await getCustomFastFoods();
+    let items = customFF;
     if (qc) {
-      items = items.filter(rt => rt.restaurant_name.toLowerCase().includes(qc) || rt.name.toLowerCase().includes(qc));
+      items = items.filter((rt: any) => rt.restaurant_name?.toLowerCase().includes(qc) || rt.name.toLowerCase().includes(qc));
     }
     return { data: { items } };
+  },
+
+  createFastFood: async (payload: any) => {
+    const newFF = { id: 'ff_user_' + Math.random().toString(36).substring(7), ...payload };
+    await saveCustomFastFood(newFF);
+    return { data: newFF };
+  },
+
+  deleteCustomFastFood: async (id: string) => {
+    await deleteCustomFastFood(id);
+    return { data: { success: true } };
   },
 };
 

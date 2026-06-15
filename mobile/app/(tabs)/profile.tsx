@@ -53,6 +53,12 @@ export default function ProfileScreen() {
   const handlePickImage = async () => {
     const launchPicker = async () => {
       try {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert('Permission Denied', 'Coach Hoo needs access to your photos to change your profile picture.');
+          return;
+        }
+
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
@@ -103,6 +109,9 @@ export default function ProfileScreen() {
                />
             </View>
           )}
+          <View style={styles.avatarPlusBadge}>
+            <Ionicons name="add" size={24} color={Colors.bg} />
+          </View>
         </Pressable>
         <Text style={styles.userName}>{user.full_name ?? 'Pip Health User'}</Text>
         <View style={[styles.goalBadge, { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary }]}>
@@ -221,6 +230,19 @@ const styles = StyleSheet.create({
     borderWidth: 3, borderColor: Colors.primary,
   },
   avatarImage: { width: 200, height: 200 },
+  avatarPlusBadge: {
+    position: 'absolute',
+    bottom: 25,
+    right: 25,
+    backgroundColor: Colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: Colors.bg,
+  },
   userName:  { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },
   userEmail: { fontSize: FontSize.sm,  color: Colors.textMuted },
   goalBadge: {
