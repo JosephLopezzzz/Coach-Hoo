@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Coach Hoo",
+    "slug": "coach-hoo",
+    "scheme": "coachhoo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/appIcon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF6EE"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/appIcon.png",
+        "backgroundColor": "#FAF6EE"
+      },
+      "package": "com.coachhoo.app"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.coachhoo.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
