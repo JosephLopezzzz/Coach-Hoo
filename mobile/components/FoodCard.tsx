@@ -46,13 +46,17 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
     badge    = f.is_raw ? 'per 100g raw' : 'per 100g';
     badgeColor = Colors.textMuted;
   } else if (item.source === 'recipe') {
-    const r = item.data as Recipe;
+    const r = item.data as any;
     name     = r.name;
-    calories = r.macros_per_100g?.calories ?? 0;
-    protein  = r.macros_per_100g?.protein  ?? 0;
-    carbs    = r.macros_per_100g?.carbs    ?? 0;
-    fat      = r.macros_per_100g?.fat      ?? 0;
-    badge    = `🇵🇭 ${r.country}`;
+    const isPortioned = !!r.macros_per_portion;
+    const macros = r.macros_per_portion ?? r.macros_per_100g ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    calories = macros.calories ?? 0;
+    protein  = macros.protein ?? 0;
+    carbs    = macros.carbs ?? 0;
+    fat      = macros.fat ?? 0;
+    badge    = isPortioned
+      ? `🇵🇭 ${r.country} · ${Math.round(r.macros_per_portion.portion_g)}g portion`
+      : `🇵🇭 ${r.country} · per 100g`;
     badgeColor = Colors.accent;
   } else {
     const rf = item.data as RestaurantFood;

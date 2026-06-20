@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { foodsApi, recipesApi, recommendApi } from '../../services/api';
+import { foodsApi, recipesApi, recommendApi, RECIPES_DB } from '../../services/api';
 import FoodCard from '../../components/FoodCard';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
 import type { Food, Recipe, RestaurantFood } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useMeals } from '../../context/MealContext';
 
 type TabKey = 'foods' | 'restaurant';
 
@@ -19,7 +20,8 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
 ];
 
 export default function SearchScreen() {
-  const { user, dailyTargets, dailyTotals } = useAuth();
+  const { user } = useAuth();
+  const { logMeal, remaining, targets, meals } = useMeals();
   const [query,       setQuery]       = useState('');
   const [activeTab,   setActiveTab]   = useState<TabKey>('foods');
   const [foods,       setFoods]       = useState<any[]>([]);
@@ -35,21 +37,58 @@ export default function SearchScreen() {
   const [newItemCarbs, setNewItemCarbs] = useState('');
   const [newItemFat, setNewItemFat] = useState('');
 
+  // Details Modal State
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItemSource, setSelectedItemSource] = useState<'food' | 'recipe' | 'restaurant' | null>(null);
+
   const search = useCallback(async (q: string) => {
     setLoading(true);
     try {
+      const remCals = remaining?.calories ? Math.max(0, remaining.calories) : (targets?.calories_target ?? 500);
+      const loggedMealTypes = meals?.map(m => m.meal_type) || [];
+      const hasBreakfast = loggedMealTypes.includes('breakfast');
+      const hasLunch = loggedMealTypes.includes('lunch');
+      const hasDinner = loggedMealTypes.includes('dinner');
+
+      let remainingMealsToEat = 0;
+      if (!hasBreakfast) remainingMealsToEat++;
+      if (!hasLunch) remainingMealsToEat++;
+      if (!hasDinner) remainingMealsToEat++;
+      
+      if (remainingMealsToEat === 0) {
+          remainingMealsToEat = 1;
+      }
+      const caloriesPerRemainingMeal = remCals / remainingMealsToEat;
+
       if (activeTab === 'foods') {
         if (!q.trim()) {
            // Default: Recommendations + Custom Foods
-           const rem = dailyTargets ? Math.max(0, dailyTargets.calories_target - (dailyTotals?.calories || 0)) : 500;
            const alg = user?.allergies || [];
            const custom = await foodsApi.listCustomFoods();
-           const recs = await recommendApi.meals(undefined, 10, rem, alg);
+           const recs = await recommendApi.meals(undefined, 10, caloriesPerRemainingMeal, alg);
            setFoods([...custom.data, ...recs.data]);
         } else {
            const { data: f } = await foodsApi.search(q);
            const { data: r } = await recipesApi.search(q);
-           setFoods([...f.results, ...r.recipes]);
+           
+           // Scale searched recipes to caloriesPerRemainingMeal to maintain consistency
+           const scaledRecipes = r.recipes.map((recipe: any) => {
+             const portion_g = caloriesPerRemainingMeal > 0 ? (caloriesPerRemainingMeal / recipe.macros_per_100g.calories) * 100 : 100;
+             const factor = portion_g / 100;
+             return {
+               ...recipe,
+               macros_per_portion: {
+                 portion_g,
+                 calories: recipe.macros_per_100g.calories * factor,
+                 protein: recipe.macros_per_100g.protein * factor,
+                 carbs: recipe.macros_per_100g.carbs * factor,
+                 fat: recipe.macros_per_100g.fat * factor,
+               }
+             };
+           });
+
+           setFoods([...f.results, ...scaledRecipes]);
         }
       } else {
         const { data } = await recommendApi.restaurant(q || undefined);
@@ -60,7 +99,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, dailyTargets, dailyTotals, user?.allergies]);
+  }, [activeTab, targets, remaining, meals, user?.allergies]);
 
   const clearResults = () => { setFoods([]); setRestaurant([]); };
 
@@ -132,6 +171,41 @@ export default function SearchScreen() {
     search(query);
   };
 
+  const handleAddPress = (item: any) => {
+    const isRecipe = !!item.meal_types;
+    const isRestaurant = !!item.restaurant_name;
+    const type = isRecipe ? 'recipe' : isRestaurant ? 'restaurant' : 'food';
+
+    const defaultQty = item.macros_per_portion?.portion_g ?? item.serving_size_g ?? 100;
+
+    Alert.alert(
+      'Log Meal',
+      `Select meal type to log "${item.name}":`,
+      [
+        { text: 'Breakfast', onPress: () => performLog(item, type, defaultQty, 'breakfast') },
+        { text: 'Lunch', onPress: () => performLog(item, type, defaultQty, 'lunch') },
+        { text: 'Dinner', onPress: () => performLog(item, type, defaultQty, 'dinner') },
+        { text: 'Snack', onPress: () => performLog(item, type, defaultQty, 'snack') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const performLog = async (item: any, type: string, quantity_g: number, mealType: string) => {
+    try {
+      await logMeal(mealType, [{
+        type: type as any,
+        id: item.id,
+        quantity_g,
+        cooking_method: 'raw',
+        with_bones: false
+      }]);
+      Alert.alert('Logged! 🎉', `${item.name} (${Math.round(quantity_g)}g) has been added to your ${mealType}.`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not log meal');
+    }
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     if (activeTab === 'foods') {
       const isRecipe = !!item.meal_types;
@@ -140,7 +214,12 @@ export default function SearchScreen() {
         <View style={styles.cardWrapper}>
           <FoodCard
             item={{ source: isRecipe ? 'recipe' : 'food', data: item }}
-            onAdd={() => console.log('Add', item.id)}
+            onPress={() => {
+              setSelectedItem(item);
+              setSelectedItemSource(isRecipe ? 'recipe' : 'food');
+              setDetailModalVisible(true);
+            }}
+            onAdd={() => handleAddPress(item)}
           />
           {isCustom && (
             <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, false)}>
@@ -158,7 +237,12 @@ export default function SearchScreen() {
       <View style={styles.cardWrapper}>
         <FoodCard
           item={{ source: 'restaurant', data: item }}
-          onAdd={() => console.log('Add restaurant', item.id)}
+          onPress={() => {
+            setSelectedItem(item);
+            setSelectedItemSource('restaurant');
+            setDetailModalVisible(true);
+          }}
+          onAdd={() => handleAddPress(item)}
         />
         {isCustomFF && (
           <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, true)}>
@@ -300,6 +384,107 @@ export default function SearchScreen() {
         </View>
       </Modal>
 
+      {/* Detail Modal */}
+      <Modal visible={detailModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedItem && (
+              <>
+                <Text style={styles.modalTitle}>{selectedItem.name}</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+                  
+                  {/* Category / Source info */}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Type / Source</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedItemSource === 'recipe' ? `🇵🇭 Recipe (${selectedItem.country})` : selectedItemSource === 'restaurant' ? `🍔 Fast Food (${selectedItem.restaurant_name})` : `🍎 Food (${selectedItem.category || 'general'})`}
+                    </Text>
+                  </View>
+
+                  {/* Macros Summary */}
+                  <View style={styles.detailMacrosContainer}>
+                    <Text style={styles.detailSecTitle}>Macros Breakdown</Text>
+                    
+                    {(() => {
+                      const macros = selectedItem.macros_per_portion ?? selectedItem.macros_per_100g ?? {
+                        calories: selectedItem.calories_per_100g ?? selectedItem.calories ?? 0,
+                        protein: selectedItem.protein_per_100g ?? selectedItem.protein ?? 0,
+                        carbs: selectedItem.carbs_per_100g ?? selectedItem.carbs ?? 0,
+                        fat: selectedItem.fat_per_100g ?? selectedItem.fat ?? 0
+                      };
+                      const portionG = selectedItem.macros_per_portion?.portion_g ?? selectedItem.serving_size_g ?? 100;
+                      
+                      return (
+                        <>
+                          <Text style={styles.portionText}>Serving size: {Math.round(portionG)}g</Text>
+                          <View style={styles.detailMacrosGrid}>
+                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.primaryGlow }]}>
+                              <Text style={[styles.detailMacroVal, { color: Colors.calories }]}>{Math.round(macros.calories)}</Text>
+                              <Text style={styles.detailMacroLabel}>kcal</Text>
+                            </View>
+                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.protein + '20' }]}>
+                              <Text style={[styles.detailMacroVal, { color: Colors.protein }]}>{Math.round(macros.protein)}g</Text>
+                              <Text style={styles.detailMacroLabel}>Protein</Text>
+                            </View>
+                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.carbs + '20' }]}>
+                              <Text style={[styles.detailMacroVal, { color: Colors.carbs }]}>{Math.round(macros.carbs)}g</Text>
+                              <Text style={styles.detailMacroLabel}>Carbs</Text>
+                            </View>
+                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.fat + '20' }]}>
+                              <Text style={[styles.detailMacroVal, { color: Colors.fat }]}>{Math.round(macros.fat)}g</Text>
+                              <Text style={styles.detailMacroLabel}>Fat</Text>
+                            </View>
+                          </View>
+                        </>
+                      );
+                    })()}
+                  </View>
+
+                  {/* Recipe Ingredients */}
+                  {selectedItemSource === 'recipe' && (() => {
+                    const recipe = RECIPES_DB.find(r => r.id === selectedItem.id);
+                    if (recipe && recipe.ingredients) {
+                      const portion_g = selectedItem.macros_per_portion?.portion_g ?? recipe.total_weight_g;
+                      const factor = portion_g / recipe.total_weight_g;
+                      const scaled = recipe.ingredients.map(ing => ({
+                        name: ing.name,
+                        qty_g: ing.base_qty_g * factor
+                      }));
+
+                      return (
+                        <View style={styles.ingredientsSection}>
+                          <Text style={styles.detailSecTitle}>Ingredients ({Math.round(portion_g)}g portion):</Text>
+                          <View style={styles.ingredientsContainer}>
+                            {scaled.map((ing, idx) => (
+                              <View key={idx} style={styles.ingredientRow}>
+                                <View style={styles.bulletPoint} />
+                                <Text style={styles.ingredientText}>
+                                  <Text style={styles.ingredientQty}>{Math.round(ing.qty_g)}g</Text> {ing.name}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <View style={styles.modalBtnRow}>
+                    <Pressable style={styles.modalCancelBtn} onPress={() => setDetailModalVisible(false)}>
+                      <Text style={styles.modalCancelText}>Close</Text>
+                    </Pressable>
+                    <Pressable style={styles.modalSaveBtn} onPress={() => { setDetailModalVisible(false); handleAddPress(selectedItem); }}>
+                      <Text style={styles.modalSaveText}>Log this item</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -370,4 +555,89 @@ const styles = StyleSheet.create({
   modalCancelText: { color: Colors.textPrimary, fontWeight: FontWeight.bold },
   modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.primary },
   modalSaveText: { color: Colors.textInverse, fontWeight: FontWeight.bold },
+
+  // Details Modal Specific Styles
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  detailLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  detailValue: {
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
+    fontWeight: FontWeight.semibold,
+  },
+  detailMacrosContainer: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  detailSecTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  portionText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: -2,
+  },
+  detailMacrosGrid: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: 4,
+  },
+  detailMacroCard: {
+    flex: 1,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailMacroVal: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+  },
+  detailMacroLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  ingredientsSection: {
+    marginTop: Spacing.md,
+  },
+  ingredientsContainer: {
+    backgroundColor: Colors.bgElevated + '30',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: 6,
+    gap: 8,
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bulletPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.accent,
+  },
+  ingredientText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  ingredientQty: {
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
 });

@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 import type { Meal, MealItem } from '../types';
 import { MEAL_TYPES } from '../constants/theme';
+import { RECIPES_DB } from '../services/api';
+import { useMeals } from '../context/MealContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -18,28 +20,102 @@ interface MealSectionProps {
 }
 
 function ItemRow({ item }: { item: MealItem }) {
+  const [showRecipe, setShowRecipe] = useState(false);
+  const isRecipe = item.source_type === 'recipe';
+  const recipe = isRecipe ? RECIPES_DB.find((r) => r.id === item.source_id) : null;
+
+  let scaledIngredients: { name: string; qty_g: number }[] = [];
+  if (recipe && recipe.ingredients) {
+    const factor = item.quantity_g / (recipe.total_weight_g || 100);
+    scaledIngredients = recipe.ingredients.map((ing) => ({
+      name: ing.name,
+      qty_g: ing.base_qty_g * factor,
+    }));
+  }
+
   return (
-    <View style={styles.itemRow}>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>
-          {item.food_name ?? item.source_type}
-        </Text>
-        <Text style={styles.itemMeta}>
-          {item.quantity_g}g
-          {item.cooking_method && item.cooking_method !== 'raw' ? ` · ${item.cooking_method}` : ''}
-          {item.bone_weight_g && item.bone_weight_g > 0 ? ` · 🦴 ${item.bone_weight_g}g bones` : (item.with_bones ? ' · with bones' : '')}
-        </Text>
-      </View>
-      <Text style={styles.itemCal}>{Math.round(item.calculated_calories ?? 0)} kcal</Text>
+    <View style={styles.itemWrapper}>
+      <Pressable
+        style={styles.itemRow}
+        onPress={() => isRecipe && setShowRecipe(!showRecipe)}
+        disabled={!isRecipe}
+      >
+        <View style={styles.itemInfo}>
+          <View style={styles.itemNameRow}>
+            <Text style={styles.itemName} numberOfLines={1}>
+              {item.food_name ?? item.source_type}
+            </Text>
+            {isRecipe && (
+              <View style={styles.recipeBadge}>
+                <Text style={styles.recipeBadgeText}>Recipe</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.itemMeta}>
+            {item.quantity_g}g
+            {item.cooking_method && item.cooking_method !== 'raw' ? ` · ${item.cooking_method}` : ''}
+            {item.bone_weight_g && item.bone_weight_g > 0 ? ` · 🦴 ${item.bone_weight_g}g bones` : (item.with_bones ? ' · with bones' : '')}
+          </Text>
+        </View>
+        <View style={styles.itemRight}>
+          <Text style={styles.itemCal}>{Math.round(item.calculated_calories ?? 0)} kcal</Text>
+          {isRecipe && (
+            <Ionicons
+              name={showRecipe ? "chevron-up" : "chevron-down"}
+              size={14}
+              color={Colors.textMuted}
+              style={{ marginLeft: 4 }}
+            />
+          )}
+        </View>
+      </Pressable>
+
+      {isRecipe && showRecipe && scaledIngredients.length > 0 && (
+        <View style={styles.ingredientsList}>
+          <Text style={styles.ingredientsTitle}>Recipe Ingredients (scaled to {item.quantity_g}g portion):</Text>
+          <View style={styles.ingredientsGrid}>
+            {scaledIngredients.map((ing, i) => (
+              <View key={i} style={styles.ingredientItem}>
+                <View style={styles.bullet} />
+                <Text style={styles.ingredientText}>
+                  {Math.round(ing.qty_g)}g <Text style={styles.ingredientName}>{ing.name}</Text>
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 export default function MealSection({ meal, onDelete }: MealSectionProps) {
+  const { targets } = useMeals();
   const [expanded, setExpanded] = useState(true);
 
   const mealMeta = MEAL_TYPES.find((m) => m.key === meal.meal_type) ?? MEAL_TYPES[0];
   const totalCal = meal.items.reduce((s, i) => s + (i.calculated_calories ?? 0), 0);
+  const totalP = meal.items.reduce((s, i) => s + (i.calculated_protein ?? 0), 0);
+  const totalC = meal.items.reduce((s, i) => s + (i.calculated_carbs ?? 0), 0);
+  const totalF = meal.items.reduce((s, i) => s + (i.calculated_fat ?? 0), 0);
+
+  const splitRatios: Record<string, number> = {
+    breakfast: 0.30,
+    lunch: 0.35,
+    dinner: 0.30,
+    snack: 0.05,
+  };
+  const ratio = splitRatios[meal.meal_type] ?? 0.25;
+
+  const calTarget = targets ? Math.round(targets.calories_target * ratio) : 0;
+  const pTarget = targets ? Math.round(targets.protein_target * ratio) : 0;
+  const cTarget = targets ? Math.round(targets.carbs_target * ratio) : 0;
+  const fTarget = targets ? Math.round(targets.fat_target * ratio) : 0;
+
+  const calPct = calTarget > 0 ? totalCal / calTarget : 0;
+  const pPct = pTarget > 0 ? totalP / pTarget : 0;
+  const cPct = cTarget > 0 ? totalC / cTarget : 0;
+  const fPct = fTarget > 0 ? totalF / fTarget : 0;
 
   const toggle = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -70,12 +146,45 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
       </Pressable>
 
       {expanded && (
-        <View style={styles.items}>
-          {meal.items.length === 0 ? (
-            <Text style={styles.emptyText}>No items logged</Text>
-          ) : (
-            meal.items.map((item) => <ItemRow key={item.id} item={item} />)
+        <View style={styles.expandedContent}>
+          {/* Meal Target Alignment Dashboard */}
+          {targets && (
+            <View style={styles.alignmentCard}>
+              <View style={styles.alignmentHeaderRow}>
+                <Ionicons name="analytics" size={14} color={Colors.textSecondary} />
+                <Text style={styles.alignmentTitle}>Meal Macro Alignment ({Math.round(ratio * 100)}% daily target)</Text>
+              </View>
+              <View style={styles.alignmentGrid}>
+                {[
+                  { label: 'Calories', current: totalCal, target: calTarget, pct: calPct, color: Colors.calories, unit: ' kcal' },
+                  { label: 'Protein', current: totalP, target: pTarget, pct: pPct, color: Colors.protein, unit: 'g' },
+                  { label: 'Carbs', current: totalC, target: cTarget, pct: cPct, color: Colors.carbs, unit: 'g' },
+                  { label: 'Fat', current: totalF, target: fTarget, pct: fPct, color: Colors.fat, unit: 'g' },
+                ].map((m) => (
+                  <View key={m.label} style={styles.alignmentItem}>
+                    <View style={styles.alignmentItemHeader}>
+                      <Text style={styles.alignmentLabel}>{m.label}</Text>
+                      <Text style={styles.alignmentValues}>
+                        <Text style={[styles.boldText, { color: m.color }]}>{Math.round(m.current)}</Text>
+                        <Text style={styles.mutedText}>/{m.target}{m.unit}</Text>
+                      </Text>
+                    </View>
+                    <View style={styles.miniTrack}>
+                      <View style={[styles.miniFill, { width: `${Math.min(100, m.pct * 100)}%`, backgroundColor: m.color }]} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
+
+          <View style={styles.items}>
+            {meal.items.length === 0 ? (
+              <Text style={styles.emptyText}>No items logged</Text>
+            ) : (
+              meal.items.map((item) => <ItemRow key={item.id} item={item} />)
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -119,42 +228,172 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.calories,
   },
+  expandedContent: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  alignmentCard: {
+    padding: Spacing.md,
+    backgroundColor: Colors.bgElevated + '30',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  alignmentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.sm,
+  },
+  alignmentTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  alignmentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  alignmentItem: {
+    width: '47%',
+    marginBottom: Spacing.xs,
+  },
+  alignmentItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  alignmentLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  alignmentValues: {
+    fontSize: FontSize.xs,
+  },
+  boldText: {
+    fontWeight: FontWeight.bold,
+  },
+  mutedText: {
+    color: Colors.textMuted,
+  },
+  miniTrack: {
+    height: 4,
+    backgroundColor: Colors.bgElevated,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+  },
+  miniFill: {
+    height: '100%',
+    borderRadius: Radius.full,
+  },
   items: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
     gap: 2,
   },
+  itemWrapper: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    paddingVertical: 10,
   },
   itemInfo: {
     flex: 1,
     marginRight: 8,
+  },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   itemName: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
     color: Colors.textPrimary,
   },
+  recipeBadge: {
+    backgroundColor: Colors.primaryGlow,
+    borderColor: Colors.primary,
+    borderWidth: 0.5,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  recipeBadgeText: {
+    fontSize: 9,
+    color: Colors.primary,
+    fontWeight: FontWeight.bold,
+  },
   itemMeta: {
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  itemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   itemCal: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
+  ingredientsList: {
+    backgroundColor: Colors.bgElevated + '20',
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  ingredientsTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  ingredientsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.bgCard,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  bullet: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.accent,
+  },
+  ingredientText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+  },
+  ingredientName: {
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+  },
   emptyText: {
     fontSize: FontSize.sm,
     color: Colors.textMuted,
     textAlign: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
 });
