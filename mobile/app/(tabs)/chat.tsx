@@ -643,15 +643,7 @@ export default function ChatScreen() {
     const isCoach = item.sender === 'coach';
     return (
       <View style={[styles.msgWrapper, isCoach ? styles.msgCoachWrapper : styles.msgUserWrapper]}>
-        {isCoach && (
-          <View style={styles.coachAvatarCircle}>
-            <Image
-              source={MASCOT_AVATARS[item.mascotState ?? 'idle']}
-              style={styles.coachAvatar}
-              resizeMode="contain"
-            />
-          </View>
-        )}
+
         <View style={[styles.msgBubble, isCoach ? styles.msgBubbleCoach : styles.msgBubbleUser]}>
           <Text style={[styles.msgText, isCoach ? styles.msgTextCoach : styles.msgTextUser]}>
             {item.text}
@@ -694,15 +686,10 @@ export default function ChatScreen() {
         showsVerticalScrollIndicator={false}
         ListFooterComponent={
           isTyping ? (
-            <View style={styles.typingContainer}>
-              <View style={styles.coachAvatarCircle}>
-                <Image source={MASCOT_AVATARS[mascotState]} style={styles.coachAvatar} resizeMode="contain" />
-              </View>
-              <View style={styles.typingBubble}>
+            <View style={styles.typingBubble}>
                 <ActivityIndicator size="small" color={Colors.primary} />
                 <Text style={styles.typingText}>Coach Hoo is writing...</Text>
               </View>
-            </View>
           ) : null
         }
       />
@@ -806,19 +793,17 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   mascotFrame: {
-    width: 60,
-    height: 60,
+    width: 72,
+    height: 72,
     borderRadius: Radius.md,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
     overflow: 'hidden',
   },
   mascotImg: {
-    width: '90%',
-    height: '90%',
+    width: '100%',
+    height: '100%',
   },
   headerInfo: {
     flex: 1,
@@ -875,8 +860,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   coachAvatar: {
-    width: '100%',
-    height: '100%',
+    width: '115%',
+    height: '115%',
   },
   msgBubble: {
     borderRadius: Radius.lg,

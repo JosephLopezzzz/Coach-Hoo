@@ -97,20 +97,21 @@ export default function ProfileScreen() {
           {user.avatar_uri ? (
             <Image
               source={{ uri: user.avatar_uri }}
-              style={[styles.avatarImage, { borderRadius: 100 }]}
+              style={[styles.avatarImage, { borderRadius: Radius.lg }]}
               resizeMode="cover"
             />
           ) : (
-            <View style={[styles.avatarImage, { alignItems: 'center', justifyContent: 'center' }]}>
+            <View style={[styles.avatarImage, { alignItems: 'center', justifyContent: 'center', borderRadius: Radius.lg, backgroundColor: Colors.bgElevated }]}>
                <Ionicons 
                  name="person" 
-                 size={120} 
+                 size={150} 
                  color={Colors.primary} 
                />
             </View>
           )}
-          <View style={styles.avatarPlusBadge}>
-            <Ionicons name="add" size={24} color={Colors.bg} />
+          {/* Camera badge — always visible so user knows photo is changeable */}
+          <View style={styles.cameraBadge}>
+            <Ionicons name="camera" size={15} color="#fff" />
           </View>
         </Pressable>
         <Text style={styles.userName}>{user.full_name ?? 'Pip Health User'}</Text>
@@ -225,22 +226,22 @@ const styles = StyleSheet.create({
   },
   avatarGlow: {
     position: 'absolute',
-    width: 160, height: 160, borderRadius: 80,
+    width: 206, height: 206, borderRadius: Radius.lg + 3,
     backgroundColor: Colors.primaryGlow,
     borderWidth: 3, borderColor: Colors.primary,
   },
   avatarImage: { width: 200, height: 200 },
-  avatarPlusBadge: {
+  cameraBadge: {
     position: 'absolute',
-    bottom: 25,
-    right: 25,
-    backgroundColor: Colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(40,40,40,0.75)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: Colors.bg,
   },
   userName:  { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },

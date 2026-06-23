@@ -52,6 +52,7 @@ export const RECIPES_DB = [
 ];
 
 // Removed hardcoded RESTAURANT_DB as per user request to allow custom scanning/adding
+export const RESTAURANT_DB: any[] = [];
 
 // ─── Local Helpers ────────────────────────────────────────────────────────────
 
