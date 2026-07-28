@@ -163,6 +163,7 @@ export interface LogManualItem {
   quantity_g: number;
   with_bones?: boolean;
   bone_weight_g?: number;
+  manual_macros?: { calories: number; protein: number; carbs: number; fat: number };
 }
 
 export type LogItem = LogFoodItem | LogRecipeItem | LogRestaurantItem | LogManualItem;

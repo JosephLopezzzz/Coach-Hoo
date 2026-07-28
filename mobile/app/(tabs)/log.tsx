@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useMeals } from '../../context/MealContext';
 import ManualEntryForm from '../../components/ManualEntryForm';
+import Toast from '../../components/Toast';
+import type { ToastData } from '../../components/Toast';
 import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import type { LogItem } from '../../types';
 import { calculateApi } from '../../services/api';
@@ -17,11 +20,12 @@ export default function LogMealScreen() {
   const [preview,  setPreview]  = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [tab,      setTab]      = useState<'manual' | 'preview'>('manual');
+  const [toast,    setToast]    = useState<ToastData | null>(null);
 
   const addItem = async (item: LogItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const newItems = [...items, item];
     setItems(newItems);
-    // Preview macros
     try {
       const { data } = await calculateApi.macros(newItems);
       setPreview({
@@ -42,19 +46,23 @@ export default function LogMealScreen() {
 
   const handleSubmit = async () => {
     if (items.length === 0) {
-      Alert.alert('No items', 'Add at least one food item before logging.');
+      setToast({ id: 'no-items', type: 'error', title: 'No items', subtitle: 'Add at least one food item before logging.' });
       return;
     }
     setLoading(true);
     try {
       await logMeal(mealType, items);
-      Alert.alert('Meal logged! 🎉', `${mealType} logged with ${items.length} item(s)`, [
-        { text: 'OK', onPress: () => { setItems([]); setPreview(null); } },
-      ]);
+      const toastSubtitle = items.length === 1
+        ? `${mealType} logged with ${items.length} item`
+        : `${mealType} logged with ${items.length} items`;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setToast({ id: 'success', type: 'success', title: 'Meal logged!', subtitle: `🎉 ${toastSubtitle}` });
+      setItems([]);
+      setPreview(null);
     } catch (err: any) {
       console.error('[LogMeal] Submit failed:', err.response?.data ?? err.message);
       const errorMsg = err.response?.data?.error ?? err.message ?? 'Could not log meal.';
-      Alert.alert('Logging Failed', `${errorMsg}\n\nMake sure the food names are recognizable or try adding fewer items.`);
+      setToast({ id: 'error', type: 'error', title: 'Logging Failed', subtitle: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -62,10 +70,10 @@ export default function LogMealScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
+
       <View style={styles.header}>
         <Text style={styles.title}>Log Meal</Text>
-
-        {/* Meal type selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
           {MEAL_TYPES.map((mt) => (
             <Pressable
@@ -83,8 +91,6 @@ export default function LogMealScreen() {
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
-        {/* Pending items list */}
         {items.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Items to Log ({items.length})</Text>
@@ -101,8 +107,6 @@ export default function LogMealScreen() {
                 </View>
               );
             })}
-
-            {/* Preview macros */}
             {preview && (
               <View style={styles.previewRow}>
                 {[
@@ -121,13 +125,11 @@ export default function LogMealScreen() {
           </View>
         )}
 
-        {/* Manual entry form */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Manual Entry</Text>
           <ManualEntryForm onSubmit={addItem} />
         </View>
 
-        {/* Submit button */}
         <Pressable
           style={[styles.submitBtn, items.length === 0 && styles.submitBtnDisabled]}
           onPress={handleSubmit}
@@ -151,13 +153,20 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: 56,
-    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    gap: Spacing.md,
+    backgroundColor: Colors.bgCard,
+    paddingBottom: Spacing.md,
   },
-  title: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary },
-  mealTypeScroll: { flexGrow: 0 },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  mealTypeScroll: {
+    flexDirection: 'row',
+  },
   mealTypeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,45 +177,90 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: 8,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: Colors.bgInput,
   },
-  mealTypeText: { fontSize: FontSize.sm, color: Colors.textMuted, fontWeight: FontWeight.medium },
-  body: { flex: 1 },
-  bodyContent: { padding: Spacing.lg, gap: Spacing.md },
+  mealTypeText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  body: {
+    flex: 1,
+  },
+  bodyContent: {
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: 40,
+  },
   card: {
     backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: Spacing.sm,
   },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
   pendingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    paddingHorizontal: 10,
+    backgroundColor: Colors.bgElevated,
+    borderRadius: Radius.md,
+    marginBottom: 6,
   },
-  pendingLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, flex: 1, marginRight: 8 },
-  previewRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  pendingLabel: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
+    marginRight: 8,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: Spacing.sm,
+    flexWrap: 'wrap',
+  },
   previewPill: {
-    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: Radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
   },
-  previewValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
-  previewLabel: { fontSize: FontSize.xs, color: Colors.textMuted },
+  previewValue: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+  },
+  previewLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+  },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: Spacing.lg,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+    paddingVertical: 14,
+    marginTop: Spacing.xs,
   },
-  submitBtnDisabled: { backgroundColor: Colors.bgElevated },
-  submitText: { color: Colors.textInverse, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  submitBtnDisabled: {
+    backgroundColor: Colors.bgElevated,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  submitText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.textInverse,
+  },
 });

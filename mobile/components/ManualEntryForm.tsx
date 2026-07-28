@@ -132,7 +132,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
 
       {/* Quick gram buttons */}
       <View style={styles.quickGrams}>
-        {['50', '100', '150', '200', '300'].map((g) => (
+        {['100', '150', '200', '250'].map((g) => (
           <Pressable
             key={g}
             style={[styles.gramBtn, grams === g && styles.gramBtnActive]}

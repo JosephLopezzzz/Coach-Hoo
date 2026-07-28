@@ -78,6 +78,48 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const breathAnim = useRef(new Animated.Value(1)).current;
+  const breathing = useRef<Animated.CompositeAnimation | null>(null);
+
+  // ─── Mascot Breathing Animation ────────────────────────────────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, {
+          toValue: 1.03,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    breathing.current = loop;
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  useEffect(() => {
+    if (isTyping && breathing.current) {
+      breathing.current.stop();
+      Animated.timing(breathAnim, {
+        toValue: 0.95,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else if (!isTyping && breathing.current) {
+      Animated.timing(breathAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        breathing.current?.start();
+      });
+    }
+  }, [isTyping]);
 
   // ─── Mascot State Animation ────────────────────────────────────────────────
   const changeMascotState = (newState: MascotState, statusMsg: string) => {
@@ -397,8 +439,8 @@ export default function ChatScreen() {
                with_bones: it.with_bones,
                bone_weight_g: it.bone_weight_g,
            }));
-           await logMeal(parsed.new_meal_type, itemsToRelog);
-           coachResponseText = `Bawk! I've moved your last meal to **${parsed.new_meal_type}**! 🐔✅`;
+           await logMeal(parsed.new_meal_type || 'snack', itemsToRelog);
+           coachResponseText = `Bawk! I've moved your last meal to **${parsed.new_meal_type || 'snack'}**! 🐔✅`;
            nextMascot = 'streak';
            nextStatus = 'Updated log!';
         } else {
@@ -611,10 +653,9 @@ export default function ChatScreen() {
     try {
       await logMeal(scannedMealType, [{
         type: 'manual',
-        id: 'manual',
         quantity_g: 100, // Normalized to 1 serving
         food_type: scannedName,
-        cooking_method: 'raw',
+        method: 'raw',
         with_bones: false,
         manual_macros: { calories: c, protein: p, carbs: cb, fat: f }
       }]);
@@ -660,7 +701,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Mascot Header View */}
       <View style={styles.header}>
-        <Animated.View style={[styles.mascotFrame, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View style={[styles.mascotFrame, { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { scale: breathAnim }] }]}>
           <Image
             source={MASCOT_IMAGES[mascotState]}
             style={styles.mascotImg}

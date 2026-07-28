@@ -31,6 +31,8 @@ export default function OnboardingScreen() {
     sex: '' as 'male' | 'female' | '',
     height_cm: '',
     weight_kg: '',
+    heightUnit: 'cm' as 'cm' | 'in',
+    weightUnit: 'kg' as 'kg' | 'lbs',
     goal: 'maintain' as 'lose' | 'maintain' | 'gain',
     health_condition: 'none',
     health_condition_custom: '',
@@ -104,11 +106,14 @@ export default function OnboardingScreen() {
         ? [...formData.allergies, formData.custom_allergy.trim().toLowerCase()]
         : formData.allergies;
 
+      const finalHeight = formData.heightUnit === 'in' ? parseFloat(formData.height_cm) * 2.54 : parseFloat(formData.height_cm);
+      const finalWeight = formData.weightUnit === 'lbs' ? parseFloat(formData.weight_kg) * 0.45359237 : parseFloat(formData.weight_kg);
+
       await completeOnboarding({
         ...formData,
         age: parseInt(formData.age),
-        height_cm: parseFloat(formData.height_cm),
-        weight_kg: parseFloat(formData.weight_kg),
+        height_cm: finalHeight,
+        weight_kg: finalWeight,
         sex: formData.sex as 'male' | 'female',
         allergies: finalAllergies,
         health_condition_custom: formData.health_condition === 'others' ? formData.health_condition_custom : '',
@@ -161,7 +166,7 @@ export default function OnboardingScreen() {
                 <Ionicons name="person-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Full Name"
+                  placeholder="Enter your nickname"
                   placeholderTextColor={Colors.textMuted}
                   value={formData.full_name}
                   onChangeText={(t) => setFormData({ ...formData, full_name: t })}
@@ -217,29 +222,43 @@ export default function OnboardingScreen() {
           {step === 3 && (
             <View style={styles.stepContainer}>
               <Text style={styles.label}>Height & Weight</Text>
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputPrefix}>H</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Height (cm)"
-                    placeholderTextColor={Colors.textMuted}
-                    value={formData.height_cm}
-                    onChangeText={(t) => setFormData({ ...formData, height_cm: t.replace(/[^0-9.]/g, '') })}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: Spacing.md }]}>
-                  <Text style={styles.inputPrefix}>W</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Weight (kg)"
-                    placeholderTextColor={Colors.textMuted}
-                    value={formData.weight_kg}
-                    onChangeText={(t) => setFormData({ ...formData, weight_kg: t.replace(/[^0-9.]/g, '') })}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputPrefix}>H</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Height"
+                  placeholderTextColor={Colors.textMuted}
+                  value={formData.height_cm}
+                  onChangeText={(t) => setFormData({ ...formData, height_cm: t.replace(/[^0-9.]/g, '') })}
+                  keyboardType="decimal-pad"
+                />
+                <Pressable 
+                  style={styles.inlineUnitToggle}
+                  onPress={() => setFormData(prev => ({ ...prev, heightUnit: prev.heightUnit === 'cm' ? 'in' : 'cm' }))}
+                >
+                  <Text style={styles.inlineUnitText}>{formData.heightUnit}</Text>
+                  <Ionicons name="swap-vertical" size={12} color={Colors.primary} />
+                </Pressable>
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputPrefix}>W</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Weight"
+                  placeholderTextColor={Colors.textMuted}
+                  value={formData.weight_kg}
+                  onChangeText={(t) => setFormData({ ...formData, weight_kg: t.replace(/[^0-9.]/g, '') })}
+                  keyboardType="decimal-pad"
+                />
+                <Pressable 
+                  style={styles.inlineUnitToggle}
+                  onPress={() => setFormData(prev => ({ ...prev, weightUnit: prev.weightUnit === 'kg' ? 'lbs' : 'kg' }))}
+                >
+                  <Text style={styles.inlineUnitText}>{formData.weightUnit}</Text>
+                  <Ionicons name="swap-vertical" size={12} color={Colors.primary} />
+                </Pressable>
               </View>
             </View>
           )}
@@ -426,6 +445,8 @@ const styles = StyleSheet.create({
   inputPrefix: { color: Colors.primary, fontWeight: FontWeight.bold, marginRight: 12, fontSize: FontSize.lg },
   input: { flex: 1, color: Colors.textPrimary, fontSize: FontSize.md },
   row: { flexDirection: 'row' },
+  inlineUnitToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primaryGlow, paddingHorizontal: 6, paddingVertical: 4, borderRadius: Radius.sm, gap: 2, marginLeft: 4 },
+  inlineUnitText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary, textTransform: 'uppercase' },
   sexContainer: { flexDirection: 'row', gap: Spacing.md },
   sexBtn: { flex: 1, height: 80, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: Colors.bgInput },
   sexText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textMuted },
