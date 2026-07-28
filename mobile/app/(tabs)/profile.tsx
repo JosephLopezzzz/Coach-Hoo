@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { resetTutorial } from '../../components/DashboardTutorial';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
 
 const ACTIVITY_LABELS: Record<number, string> = {
@@ -200,6 +201,18 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Replay Tutorial */}
+      <Pressable
+        style={styles.replayBtn}
+        onPress={() => {
+          resetTutorial();
+          Alert.alert('Tutorial Reset', 'The Coach Hoo tutorial will appear again on your next dashboard visit.');
+        }}
+      >
+        <Ionicons name="help-circle-outline" size={20} color={Colors.primary} />
+        <Text style={styles.replayBtnText}>Replay Tutorial</Text>
+      </Pressable>
+
       {/* Reset */}
       <Pressable style={styles.logoutBtn} onPress={handleReset} disabled={resetting}>
         {resetting
@@ -282,6 +295,14 @@ const styles = StyleSheet.create({
   },
   logoutText: { fontSize: FontSize.md, color: Colors.error, fontWeight: FontWeight.semibold },
   version:    { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm },
+
+  // Replay tutorial
+  replayBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: Spacing.md, borderRadius: Radius.lg,
+    borderWidth: 1, borderColor: `${Colors.primary}40`, backgroundColor: `${Colors.primary}10`,
+  },
+  replayBtnText: { fontSize: FontSize.md, color: Colors.primary, fontWeight: FontWeight.semibold },
 
   // Health Info card
   healthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.border },

@@ -141,7 +141,7 @@ export default function OnboardingScreen() {
         <View style={styles.header}>
           <View style={styles.mascotWrapper}>
             <Image 
-              source={require('../../assets/mascot/idle.png')} 
+              source={require('../../assets/mascot/idle.gif')} 
               style={styles.mascot}
               resizeMode="contain"
             />

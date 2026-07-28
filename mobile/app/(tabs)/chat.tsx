@@ -13,16 +13,16 @@ import { FOODS_DB, RECIPES_DB, RESTAURANT_DB, calculateItemMacros, recommendApi 
 
 // ─── Mascot Image Map (root-level high-res for header) ───────────────────────
 const MASCOT_IMAGES = {
-  idle:    require('../../assets/idle.png'),
-  worry:   require('../../assets/worry.png'),
-  sleeppp: require('../../assets/sleeppp.png'),
-  streak:  require('../../assets/streak.png'),
-  flex:    require('../../assets/flex.png'),
+  idle:    require('../../assets/mascot/idle.gif'),
+  worry:   require('../../assets/mascot/worry.png'),
+  sleeppp: require('../../assets/mascot/sleeppp.png'),
+  streak:  require('../../assets/mascot/streak.png'),
+  flex:    require('../../assets/mascot/flex.png'),
 };
 
 // ─── Small avatars for chat bubbles ──────────────────────────────────────────
 const MASCOT_AVATARS = {
-  idle:    require('../../assets/mascot/idle.png'),
+  idle:    require('../../assets/mascot/idle.gif'),
   worry:   require('../../assets/mascot/worry.png'),
   sleeppp: require('../../assets/mascot/sleeppp.png'),
   streak:  require('../../assets/mascot/streak.png'),
