@@ -5,9 +5,10 @@ import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/them
 interface CoachMessageProps {
   message: string;
   visible: boolean;
+  tailTop?: number;
 }
 
-export default function CoachMessage({ message, visible }: CoachMessageProps) {
+export default function CoachMessage({ message, visible, tailTop }: CoachMessageProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -42,7 +43,7 @@ export default function CoachMessage({ message, visible }: CoachMessageProps) {
         },
       ]}
     >
-      <View style={styles.tail} />
+      <View style={[styles.tail, { top: tailTop ?? 42 }]} />
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );
