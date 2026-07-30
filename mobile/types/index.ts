@@ -15,6 +15,8 @@ export interface User {
   health_condition?: string;
   health_condition_custom?: string;  // free-text for "Other condition"
   allergies?: string[];              // e.g. ["peanuts", "shellfish", "dairy"]
+  allergy_other?: string;            // free-text for other allergen
+  intolerances?: string;             // free-text for food intolerances
   created_at: string;
   // Joined from daily_targets
   calories_target?: number;

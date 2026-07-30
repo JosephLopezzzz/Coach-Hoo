@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   RefreshControl, Animated,
@@ -92,6 +92,11 @@ export default function DashboardScreen() {
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
   const prevMealCount = useRef(meals.length);
 
+  const fabRef = useRef<View>(null);
+  const trackerRef = useRef<View>(null);
+  const coachRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
   const coach = useCoachMessage(
     user?.full_name,
     meals,
@@ -145,8 +150,9 @@ export default function DashboardScreen() {
 
   return (
     <>
-      <ScrollView
-        style={styles.root}
+        <ScrollView
+          ref={scrollRef}
+          style={styles.root}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -163,14 +169,17 @@ export default function DashboardScreen() {
             <Text style={styles.date}>{today}</Text>
             <Text style={styles.greeting}>{coach.greeting}</Text>
           </View>
-          <Pressable style={styles.fab} onPress={() => router.push('/(tabs)/log')}>
-            <Ionicons name="add" size={24} color={Colors.textInverse} />
-          </Pressable>
+          <View ref={fabRef}>
+            <Pressable style={styles.fab} onPress={() => router.push('/(tabs)/log')}>
+              <Ionicons name="add" size={24} color={Colors.textInverse} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Coach Guide — mascot + speech bubble */}
-        <Animated.View
-          style={{
+        <View ref={coachRef}>
+          <Animated.View
+            style={{
             opacity: coachCardAnim,
             transform: [
               {
@@ -184,8 +193,10 @@ export default function DashboardScreen() {
         >
           <CoachGuide message={displayMessage} visible />
         </Animated.View>
+        </View>
 
-        {/* Calorie Ring */}
+        {/* Calorie Ring + Macro bars */}
+        <View ref={trackerRef}>
         <View style={styles.ringCard}>
           <CalorieRing consumed={totals.calories} target={caloriesTarget} />
         </View>
@@ -250,6 +261,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
         </View>
+        </View>
 
         {/* Today's meals */}
         <View style={styles.section}>
@@ -270,6 +282,7 @@ export default function DashboardScreen() {
                 source={require('../../assets/mascot/idle.gif')}
                 style={styles.emptyMascot}
                 contentFit="contain"
+                priority="low"
               />
               <Text style={styles.emptyTitle}>
                 {new Date().getHours() < 12
@@ -306,6 +319,9 @@ export default function DashboardScreen() {
       <DashboardTutorial
         visible={showTutorial}
         onComplete={() => setShowTutorial(false)}
+        targetRefs={{ fabRef, trackerRef, coachRef }}
+        scrollViewRef={scrollRef}
+        userName={user?.full_name}
       />
     </>
   );
@@ -442,9 +458,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   emptyMascot: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 4,
   },
   emptyTitle: {

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { MealProvider } from '../context/MealContext';
+import { LanguageProvider } from '../context/LanguageContext';
 import { Colors } from '../constants/theme';
 
 function RootLayoutNav() {
@@ -28,10 +29,12 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <MealProvider>
-        <StatusBar style="dark" backgroundColor={Colors.bg} />
-        <RootLayoutNav />
-      </MealProvider>
+      <LanguageProvider>
+        <MealProvider>
+          <StatusBar style="dark" backgroundColor={Colors.bg} />
+          <RootLayoutNav />
+        </MealProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

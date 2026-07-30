@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   tail: {
     position: 'absolute',
     left: -7,
-    top: 24,
+    top: 42,
     width: 12,
     height: 12,
     backgroundColor: '#FFF5E6',

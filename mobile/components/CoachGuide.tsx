@@ -9,7 +9,7 @@ interface CoachGuideProps {
   visible: boolean;
 }
 
-export default function CoachGuide({ message, visible }: CoachGuideProps) {
+function CoachGuide({ message, visible }: CoachGuideProps) {
   return (
     <View style={styles.container}>
       <View style={styles.mascotFrame}>
@@ -17,6 +17,7 @@ export default function CoachGuide({ message, visible }: CoachGuideProps) {
           source={require('../assets/mascot/idle.gif')}
           style={styles.mascot}
           contentFit="contain"
+          priority="low"
           cachePolicy="memory-disk"
         />
       </View>
@@ -24,6 +25,8 @@ export default function CoachGuide({ message, visible }: CoachGuideProps) {
     </View>
   );
 }
+
+export default React.memo(CoachGuide);
 
 const styles = StyleSheet.create({
   container: {
@@ -34,21 +37,16 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: '#EEDECB',
-    gap: 8,
+    gap: 10,
   },
   mascotFrame: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    overflow: 'hidden',
+    width: 100,
+    height: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF6EE',
-    borderWidth: 2,
-    borderColor: '#E8A254',
   },
   mascot: {
-    width: 68,
-    height: 68,
+    width: 88,
+    height: 88,
   },
 });
