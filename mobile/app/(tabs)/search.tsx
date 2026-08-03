@@ -5,23 +5,29 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { foodsApi, recipesApi, recommendApi, RECIPES_DB } from '../../services/api';
 import FoodCard from '../../components/FoodCard';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
+import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import type { Food, Recipe, RestaurantFood } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useMeals } from '../../context/MealContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { getMealTypeLabel } from '../../constants/i18n';
+import type { StringKey } from '../../constants/strings';
 
 type TabKey = 'foods' | 'restaurant';
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'foods',      label: 'Foods & Recipes', icon: 'nutrition-outline' },
-  { key: 'restaurant', label: 'Fast Food',       icon: 'fast-food-outline' },
+const TABS: { key: TabKey; labelKey: StringKey; icon: string }[] = [
+  { key: 'foods',      labelKey: 'search.tabFoods',      icon: 'nutrition-outline' },
+  { key: 'restaurant', labelKey: 'search.tabRestaurant', icon: 'fast-food-outline' },
 ];
 
 export default function SearchScreen() {
   const { user } = useAuth();
   const { logMeal, remaining, targets, meals } = useMeals();
+  const { lang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [query,       setQuery]       = useState('');
   const [activeTab,   setActiveTab]   = useState<TabKey>('foods');
   const [foods,       setFoods]       = useState<any[]>([]);
@@ -112,18 +118,18 @@ export default function SearchScreen() {
   const handleScanMenu = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission Denied', 'Camera access is required to scan menus.');
+      Alert.alert(t('ocr.permissionDenied'), t('ocr.cameraRequiredMenu'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.5 });
     if (!result.canceled) {
       Alert.alert(
-        'Simulated OCR',
-        'In a production app with a backend server, we would run AI OCR here to extract calories from the image. For now, please input the macros manually!',
+        t('ocr.simulatedTitle'),
+        t('ocr.simulatedMenuBody'),
         [
-          { text: 'OK', onPress: () => {
+          { text: t('common.ok'), onPress: () => {
               setNewItemName('');
-              setNewItemRestaurant('Scanned Menu Item');
+              setNewItemRestaurant(t('search.scannedMenuItem'));
               setModalVisible(true);
           }}
         ]
@@ -132,12 +138,12 @@ export default function SearchScreen() {
   };
 
   const handleSaveCustomItem = async () => {
-    if (!newItemName) return Alert.alert('Error', 'Name is required');
-    
+    if (!newItemName) return Alert.alert(t('common.error'), t('search.nameRequired'));
+
     if (activeTab === 'restaurant') {
       await recommendApi.createFastFood({
         name: newItemName,
-        restaurant_name: newItemRestaurant || 'Custom Fast Food',
+        restaurant_name: newItemRestaurant || t('search.customFastFood'),
         calories: parseFloat(newItemCals) || 0,
         protein: parseFloat(newItemProtein) || 0,
         carbs: parseFloat(newItemCarbs) || 0,
@@ -179,14 +185,14 @@ export default function SearchScreen() {
     const defaultQty = item.macros_per_portion?.portion_g ?? item.serving_size_g ?? 100;
 
     Alert.alert(
-      'Log Meal',
-      `Select meal type to log "${item.name}":`,
+      t('log.title'),
+      t('search.selectMealType', { name: item.name }),
       [
-        { text: 'Breakfast', onPress: () => performLog(item, type, defaultQty, 'breakfast') },
-        { text: 'Lunch', onPress: () => performLog(item, type, defaultQty, 'lunch') },
-        { text: 'Dinner', onPress: () => performLog(item, type, defaultQty, 'dinner') },
-        { text: 'Snack', onPress: () => performLog(item, type, defaultQty, 'snack') },
-        { text: 'Cancel', style: 'cancel' }
+        ...MEAL_TYPES.map((mt) => ({
+          text: getMealTypeLabel(lang, mt.key),
+          onPress: () => performLog(item, type, defaultQty, mt.key),
+        })),
+        { text: t('common.cancel'), style: 'cancel' as const },
       ]
     );
   };
@@ -200,9 +206,16 @@ export default function SearchScreen() {
         cooking_method: 'raw',
         with_bones: false
       }]);
-      Alert.alert('Logged! 🎉', `${item.name} (${Math.round(quantity_g)}g) has been added to your ${mealType}.`);
+      Alert.alert(
+        t('search.loggedTitle'),
+        t('search.loggedBody', {
+          name: item.name,
+          grams: Math.round(quantity_g),
+          mealType: getMealTypeLabel(lang, mealType),
+        }),
+      );
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Could not log meal');
+      Alert.alert(t('common.error'), err.message || t('search.couldNotLog'));
     }
   };
 
@@ -224,7 +237,7 @@ export default function SearchScreen() {
           {isCustom && (
             <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, false)}>
               <Ionicons name="trash" size={16} color={Colors.error} />
-              <Text style={styles.deleteBtnText}>Delete Custom Food</Text>
+              <Text style={styles.deleteBtnText}>{t('search.deleteCustomFood')}</Text>
             </Pressable>
           )}
         </View>
@@ -247,7 +260,7 @@ export default function SearchScreen() {
         {isCustomFF && (
           <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, true)}>
             <Ionicons name="trash" size={16} color={Colors.error} />
-            <Text style={styles.deleteBtnText}>Delete Fast Food</Text>
+            <Text style={styles.deleteBtnText}>{t('search.deleteFastFood')}</Text>
           </Pressable>
         )}
       </View>
@@ -259,13 +272,15 @@ export default function SearchScreen() {
   return (
     <View style={styles.root}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Find Food</Text>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+        <Text style={styles.title}>{t('search.title')}</Text>
         <View style={styles.searchRow}>
           <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
           <TextInput
             style={styles.input}
-            placeholder={`Search ${activeTab}...`}
+            placeholder={t('search.placeholder', {
+              tab: activeTab === 'restaurant' ? t('search.tabRestaurant') : t('search.tabFoods'),
+            })}
             placeholderTextColor={Colors.textMuted}
             value={query}
             onChangeText={(q) => { setQuery(q); search(q); }}
@@ -288,7 +303,7 @@ export default function SearchScreen() {
               onPress={() => setActiveTab(tab.key)}
             >
               <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-                {tab.label}
+                {t(tab.labelKey)}
               </Text>
             </Pressable>
           ))}
@@ -301,17 +316,17 @@ export default function SearchScreen() {
           <>
             <Pressable style={styles.actionBtn} onPress={handleScanMenu}>
               <Ionicons name="camera-outline" size={18} color={Colors.primary} />
-              <Text style={styles.actionBtnText}>Scan Menu</Text>
+              <Text style={styles.actionBtnText}>{t('search.scanMenu')}</Text>
             </Pressable>
             <Pressable style={styles.actionBtn} onPress={() => { setNewItemRestaurant(''); setModalVisible(true); }}>
               <Ionicons name="add-outline" size={18} color={Colors.primary} />
-              <Text style={styles.actionBtnText}>Add Manually</Text>
+              <Text style={styles.actionBtnText}>{t('search.addManually')}</Text>
             </Pressable>
           </>
         ) : (
           <Pressable style={[styles.actionBtn, { flex: 1 }]} onPress={() => setModalVisible(true)}>
             <Ionicons name="add-outline" size={18} color={Colors.primary} />
-            <Text style={styles.actionBtnText}>Add Custom Food</Text>
+            <Text style={styles.actionBtnText}>{t('search.addCustomFood')}</Text>
           </Pressable>
         )}
       </View>
@@ -323,11 +338,11 @@ export default function SearchScreen() {
         <View style={styles.empty}>
           <Ionicons name="fast-food-outline" size={48} color={Colors.textMuted} />
           <Text style={styles.emptyText}>
-            {activeTab === 'restaurant' ? 'No custom fast foods yet.' : 'No results found.'}
+            {activeTab === 'restaurant' ? t('search.noFastFood') : t('search.noResults')}
           </Text>
           {activeTab === 'restaurant' && (
              <Text style={[styles.emptyText, { textAlign: 'center', fontSize: FontSize.sm, marginTop: Spacing.sm }]}>
-               Tap 'Scan Menu' or 'Add Manually' to store your favorite fast food macros for easy logging!
+               {t('search.fastFoodHint')}
              </Text>
           )}
         </View>
@@ -346,37 +361,37 @@ export default function SearchScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Add {activeTab === 'restaurant' ? 'Fast Food' : 'Custom Food'}
+              {activeTab === 'restaurant' ? t('search.addFastFood') : t('search.addCustomFood')}
             </Text>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.inputLabel}>Name</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. 1pc Chickenjoy" placeholderTextColor={Colors.textMuted} value={newItemName} onChangeText={setNewItemName} />
-              
+              <Text style={styles.inputLabel}>{t('search.name')}</Text>
+              <TextInput style={styles.modalInput} placeholder={t('ph.exampleMenuItem')} placeholderTextColor={Colors.textMuted} value={newItemName} onChangeText={setNewItemName} />
+
               {activeTab === 'restaurant' && (
                 <>
-                  <Text style={styles.inputLabel}>Restaurant</Text>
-                  <TextInput style={styles.modalInput} placeholder="e.g. Jollibee" placeholderTextColor={Colors.textMuted} value={newItemRestaurant} onChangeText={setNewItemRestaurant} />
+                  <Text style={styles.inputLabel}>{t('search.restaurant')}</Text>
+                  <TextInput style={styles.modalInput} placeholder={t('ph.exampleRestaurant')} placeholderTextColor={Colors.textMuted} value={newItemRestaurant} onChangeText={setNewItemRestaurant} />
                 </>
               )}
 
-              <Text style={styles.inputLabel}>Calories</Text>
+              <Text style={styles.inputLabel}>{t('macro.calories')}</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemCals} onChangeText={setNewItemCals} />
 
-              <Text style={styles.inputLabel}>Protein (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.protein')} (g)</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemProtein} onChangeText={setNewItemProtein} />
 
-              <Text style={styles.inputLabel}>Carbs (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.carbs')} (g)</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemCarbs} onChangeText={setNewItemCarbs} />
 
-              <Text style={styles.inputLabel}>Fat (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.fat')} (g)</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemFat} onChangeText={setNewItemFat} />
 
               <View style={styles.modalBtnRow}>
                 <Pressable style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                 </Pressable>
                 <Pressable style={styles.modalSaveBtn} onPress={handleSaveCustomItem}>
-                  <Text style={styles.modalSaveText}>Save Item</Text>
+                  <Text style={styles.modalSaveText}>{t('search.saveItem')}</Text>
                 </Pressable>
               </View>
             </ScrollView>
@@ -395,15 +410,19 @@ export default function SearchScreen() {
                   
                   {/* Category / Source info */}
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Type / Source</Text>
+                    <Text style={styles.detailLabel}>{t('search.typeSource')}</Text>
                     <Text style={styles.detailValue}>
-                      {selectedItemSource === 'recipe' ? `🇵🇭 Recipe (${selectedItem.country})` : selectedItemSource === 'restaurant' ? `🍔 Fast Food (${selectedItem.restaurant_name})` : `🍎 Food (${selectedItem.category || 'general'})`}
+                      {selectedItemSource === 'recipe'
+                        ? t('search.srcRecipe', { country: selectedItem.country })
+                        : selectedItemSource === 'restaurant'
+                          ? t('search.srcRestaurant', { restaurant: selectedItem.restaurant_name })
+                          : t('search.srcFood', { category: selectedItem.category || t('search.categoryGeneral') })}
                     </Text>
                   </View>
 
                   {/* Macros Summary */}
                   <View style={styles.detailMacrosContainer}>
-                    <Text style={styles.detailSecTitle}>Macros Breakdown</Text>
+                    <Text style={styles.detailSecTitle}>{t('search.macrosBreakdown')}</Text>
                     
                     {(() => {
                       const macros = selectedItem.macros_per_portion ?? selectedItem.macros_per_100g ?? {
@@ -416,23 +435,23 @@ export default function SearchScreen() {
                       
                       return (
                         <>
-                          <Text style={styles.portionText}>Serving size: {Math.round(portionG)}g</Text>
+                          <Text style={styles.portionText}>{t('search.servingSize', { grams: Math.round(portionG) })}</Text>
                           <View style={styles.detailMacrosGrid}>
                             <View style={[styles.detailMacroCard, { backgroundColor: Colors.primaryGlow }]}>
                               <Text style={[styles.detailMacroVal, { color: Colors.calories }]}>{Math.round(macros.calories)}</Text>
-                              <Text style={styles.detailMacroLabel}>kcal</Text>
+                              <Text style={styles.detailMacroLabel}>{t('macro.kcal')}</Text>
                             </View>
                             <View style={[styles.detailMacroCard, { backgroundColor: Colors.protein + '20' }]}>
                               <Text style={[styles.detailMacroVal, { color: Colors.protein }]}>{Math.round(macros.protein)}g</Text>
-                              <Text style={styles.detailMacroLabel}>Protein</Text>
+                              <Text style={styles.detailMacroLabel}>{t('macro.protein')}</Text>
                             </View>
                             <View style={[styles.detailMacroCard, { backgroundColor: Colors.carbs + '20' }]}>
                               <Text style={[styles.detailMacroVal, { color: Colors.carbs }]}>{Math.round(macros.carbs)}g</Text>
-                              <Text style={styles.detailMacroLabel}>Carbs</Text>
+                              <Text style={styles.detailMacroLabel}>{t('macro.carbs')}</Text>
                             </View>
                             <View style={[styles.detailMacroCard, { backgroundColor: Colors.fat + '20' }]}>
                               <Text style={[styles.detailMacroVal, { color: Colors.fat }]}>{Math.round(macros.fat)}g</Text>
-                              <Text style={styles.detailMacroLabel}>Fat</Text>
+                              <Text style={styles.detailMacroLabel}>{t('macro.fat')}</Text>
                             </View>
                           </View>
                         </>
@@ -453,7 +472,7 @@ export default function SearchScreen() {
 
                       return (
                         <View style={styles.ingredientsSection}>
-                          <Text style={styles.detailSecTitle}>Ingredients ({Math.round(portion_g)}g portion):</Text>
+                          <Text style={styles.detailSecTitle}>{t('search.ingredients', { grams: Math.round(portion_g) })}</Text>
                           <View style={styles.ingredientsContainer}>
                             {scaled.map((ing, idx) => (
                               <View key={idx} style={styles.ingredientRow}>
@@ -472,10 +491,10 @@ export default function SearchScreen() {
 
                   <View style={styles.modalBtnRow}>
                     <Pressable style={styles.modalCancelBtn} onPress={() => setDetailModalVisible(false)}>
-                      <Text style={styles.modalCancelText}>Close</Text>
+                      <Text style={styles.modalCancelText}>{t('common.close')}</Text>
                     </Pressable>
                     <Pressable style={styles.modalSaveBtn} onPress={() => { setDetailModalVisible(false); handleAddPress(selectedItem); }}>
-                      <Text style={styles.modalSaveText}>Log this item</Text>
+                      <Text style={styles.modalSaveText}>{t('search.logThisItem')}</Text>
                     </Pressable>
                   </View>
                 </ScrollView>
@@ -493,7 +512,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
     backgroundColor: Colors.bg,
     gap: Spacing.md,

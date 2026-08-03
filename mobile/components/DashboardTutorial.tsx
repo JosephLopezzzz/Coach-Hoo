@@ -12,6 +12,8 @@ import {
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Confetti from './Confetti';
+import { useLanguage } from '../context/LanguageContext';
+import type { StringKey } from '../constants/i18n';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 
 const TUTORIAL_KEY = 'coach_hoo_tutorial_complete';
@@ -80,6 +82,7 @@ export default function DashboardTutorial({
   userName,
   scrollViewRef,
 }: DashboardTutorialProps) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -87,38 +90,42 @@ export default function DashboardTutorial({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { width: screenW, height: screenH } = Dimensions.get('window');
 
-  const name = userName?.split(' ')[0] ?? 'there';
+  const name = userName?.split(' ')[0] || t('coach.friend');
 
-  const steps = [
+  const steps: {
+    titleKey: StringKey;
+    messageKey: StringKey;
+    getRef: () => React.RefObject<View | null> | null;
+    /** Scroll offset to bring the target into view before measuring. */
+    scrollTo?: number;
+  }[] = [
     {
-      title: 'Welcome to Coach Hoo!',
-      message: `Hi ${name}! I'm your guide through this app. Let me show you around so you can start tracking your nutrition with confidence.`,
-      getRef: () => null as React.RefObject<View> | null,
-      measureFirst: false,
+      titleKey: 'tutorial.welcome.title',
+      messageKey: 'tutorial.welcome.body',
+      getRef: () => null,
     },
     {
-      title: 'Log Your Meals',
-      message: 'Tap the + button to record what you eat. Tell me the food and I\'ll calculate the macros for you.',
+      titleKey: 'tutorial.log.title',
+      messageKey: 'tutorial.log.body',
       getRef: () => targetRefs.fabRef,
-      measureFirst: true,
+      scrollTo: 0,
     },
     {
-      title: 'Track Your Progress',
-      message: 'Your calorie tracker and macro bars show how close you are to your daily targets. The fuller they are, the better!',
+      titleKey: 'tutorial.track.title',
+      messageKey: 'tutorial.track.body',
       getRef: () => targetRefs.trackerRef,
-      measureFirst: true,
+      scrollTo: 0,
     },
     {
-      title: 'Coach Hoo Responds',
-      message: 'I read your activity and give you tailored feedback, encouragement, and tips to keep you on track.',
+      titleKey: 'tutorial.coach.title',
+      messageKey: 'tutorial.coach.body',
       getRef: () => targetRefs.coachRef,
-      measureFirst: true,
+      scrollTo: 0,
     },
     {
-      title: "You're Ready!",
-      message: `Log your first entry and I'll guide you from there.`,
-      getRef: () => null as React.RefObject<View> | null,
-      measureFirst: false,
+      titleKey: 'tutorial.ready.title',
+      messageKey: 'tutorial.ready.body',
+      getRef: () => null,
     },
   ];
 
@@ -150,20 +157,28 @@ export default function DashboardTutorial({
       setStep(next);
       setSpotlight(null);
 
-      const ref = steps[next]?.getRef?.();
-      if (steps[next]?.measureFirst && ref) {
-        const rect = await measureTarget(ref);
-        if (rect) {
-          setSpotlight(rect);
-        } else {
-          setTimeout(async () => {
-            const retry = await measureTarget(ref);
-            if (retry) setSpotlight(retry);
-          }, 300);
-        }
+      const target = steps[next];
+      const ref = target?.getRef?.();
+      if (!ref) return;
+
+      // Bring the target back into view first — measureInWindow reports
+      // off-screen coordinates if the user has scrolled away from it.
+      if (target.scrollTo !== undefined && scrollViewRef?.current) {
+        scrollViewRef.current.scrollTo({ y: target.scrollTo, animated: true });
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+
+      const rect = await measureTarget(ref);
+      if (rect) {
+        setSpotlight(rect);
+      } else {
+        setTimeout(async () => {
+          const retry = await measureTarget(ref);
+          if (retry) setSpotlight(retry);
+        }, 300);
       }
     },
-    [measureTarget],
+    [measureTarget, scrollViewRef],
   );
 
   // Reset
@@ -253,8 +268,8 @@ export default function DashboardTutorial({
               />
             </View>
             <View style={styles.textWrap}>
-              <Text style={styles.title}>{current.title}</Text>
-              <Text style={styles.message}>{current.message}</Text>
+              <Text style={styles.title}>{t(current.titleKey)}</Text>
+              <Text style={styles.message}>{t(current.messageKey, { name })}</Text>
             </View>
           </View>
 
@@ -266,7 +281,7 @@ export default function DashboardTutorial({
 
           <View style={styles.controls}>
             <Pressable onPress={handleSkip} style={styles.skipBtn}>
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={styles.skipText}>{t('common.skip')}</Text>
             </Pressable>
             <View style={styles.navGroup}>
               {!isFirst && (
@@ -274,7 +289,7 @@ export default function DashboardTutorial({
                   style={styles.navBtn}
                   onPress={() => goTo(step - 1)}
                 >
-                  <Text style={styles.navBtnText}>Back</Text>
+                  <Text style={styles.navBtnText}>{t('common.back')}</Text>
                 </Pressable>
               )}
               {isLast ? (
@@ -282,14 +297,14 @@ export default function DashboardTutorial({
                   style={[styles.navBtn, styles.doneBtn]}
                   onPress={handleComplete}
                 >
-                  <Text style={styles.doneBtnText}>Done</Text>
+                  <Text style={styles.doneBtnText}>{t('common.done')}</Text>
                 </Pressable>
               ) : (
                 <Pressable
                   style={[styles.navBtn, styles.nextBtn]}
                   onPress={() => goTo(step + 1)}
                 >
-                  <Text style={styles.nextBtnText}>Next</Text>
+                  <Text style={styles.nextBtnText}>{t('common.next')}</Text>
                 </Pressable>
               )}
             </View>

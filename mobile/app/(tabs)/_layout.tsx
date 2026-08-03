@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../../context/LanguageContext';
 import { Colors, FontSize } from '../../constants/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -15,6 +16,8 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const { t } = useLanguage();
+
   return (
     <Tabs
       screenOptions={{
@@ -33,27 +36,27 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Dashboard', tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} /> }}
+        options={{ title: t('tab.dashboard'), tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} /> }}
       />
       <Tabs.Screen
         name="chat"
-        options={{ title: 'Coach Hoo', tabBarIcon: ({ focused }) => <TabIcon name="chatbubbles" focused={focused} /> }}
+        options={{ title: t('tab.coach'), tabBarIcon: ({ focused }) => <TabIcon name="chatbubbles" focused={focused} /> }}
       />
       <Tabs.Screen
         name="search"
-        options={{ title: 'Search', tabBarIcon: ({ focused }) => <TabIcon name="search" focused={focused} /> }}
+        options={{ title: t('tab.search'), tabBarIcon: ({ focused }) => <TabIcon name="search" focused={focused} /> }}
       />
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Log Meal',
+          title: t('tab.log'),
           tabBarIcon: ({ focused }) => <TabIcon name="add-circle" focused={focused} />,
           tabBarActiveTintColor: Colors.primary,
         }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Profile', tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }}
+        options={{ title: t('tab.profile'), tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }}
       />
     </Tabs>
   );

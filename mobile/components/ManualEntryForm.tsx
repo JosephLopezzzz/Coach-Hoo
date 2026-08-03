@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 import { COOKING_METHODS, FOOD_TYPES } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
+import { getCookingMethodLabel } from '../constants/i18n';
 import type { LogManualItem } from '../types';
 
 interface ManualEntryFormProps {
@@ -62,6 +64,7 @@ function FoodTypeChips({
 }
 
 export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
+  const { lang, t } = useLanguage();
   const [foodType,      setFoodType]      = useState('chicken');
   const [cookingMethod, setCookingMethod] = useState('raw');
   const [grams,         setGrams]         = useState('100');
@@ -71,10 +74,15 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [macros,        setMacros]        = useState({ cal: '', p: '', c: '', f: '' });
   const [error,         setError]         = useState('');
 
+  const cookingOptions = React.useMemo(
+    () => COOKING_METHODS.map((m) => ({ key: m.key, label: getCookingMethodLabel(lang, m.key) })),
+    [lang],
+  );
+
   const handleSubmit = () => {
     const quantity = parseFloat(grams);
-    if (!foodType.trim()) { setError('Enter a food type'); return; }
-    if (isNaN(quantity) || quantity <= 0) { setError('Enter a valid weight (g)'); return; }
+    if (!foodType.trim()) { setError(t('form.errFoodType')); return; }
+    if (isNaN(quantity) || quantity <= 0) { setError(t('form.errWeight')); return; }
     setError('');
 
     const payload: any = {
@@ -100,31 +108,31 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Food Type</Text>
+      <Text style={styles.sectionLabel}>{t('form.foodType')}</Text>
       <FoodTypeChips value={foodType} onChange={setFoodType} />
 
       {/* Custom text override */}
       <TextInput
         style={styles.input}
-        placeholder="Or type a food name..."
+        placeholder={t('form.foodPlaceholder')}
         placeholderTextColor={Colors.textMuted}
         value={foodType}
         onChangeText={setFoodType}
       />
 
-      <Text style={styles.sectionLabel}>Cooking Method</Text>
+      <Text style={styles.sectionLabel}>{t('form.cookingMethod')}</Text>
       <ChipList
-        options={COOKING_METHODS}
+        options={cookingOptions}
         value={cookingMethod as any}
         onChange={setCookingMethod as any}
         color={Colors.primary}
       />
 
-      <Text style={styles.sectionLabel}>Amount (grams)</Text>
+      <Text style={styles.sectionLabel}>{t('form.amountGrams')}</Text>
       <TextInput
         style={styles.input}
         keyboardType="decimal-pad"
-        placeholder="e.g. 150"
+        placeholder={t('ph.exampleGrams')}
         placeholderTextColor={Colors.textMuted}
         value={grams}
         onChangeText={setGrams}
@@ -148,8 +156,8 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       <View style={styles.bonesContainer}>
         <View style={styles.bonesRow}>
           <View>
-            <Text style={styles.sectionLabel}>Has Bones?</Text>
-            <Text style={styles.bonesHint}>Input the weight of the bones in grams</Text>
+            <Text style={styles.sectionLabel}>{t('form.hasBones')}</Text>
+            <Text style={styles.bonesHint}>{t('form.bonesHint')}</Text>
           </View>
           <Switch
             value={hasBones}
@@ -160,11 +168,11 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         </View>
         {hasBones && (
           <View style={styles.boneWeightInputRow}>
-            <Text style={styles.boneWeightLabel}>Bone Weight (grams)</Text>
+            <Text style={styles.boneWeightLabel}>{t('form.boneWeight')}</Text>
             <TextInput
               style={styles.boneInput}
               keyboardType="decimal-pad"
-              placeholder="e.g. 20"
+              placeholder={t('ph.exampleBones')}
               placeholderTextColor={Colors.textMuted}
               value={boneWeight}
               onChangeText={setBoneWeight}
@@ -174,7 +182,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       </View>
 
       <View style={styles.macrosToggleRow}>
-        <Text style={styles.sectionLabel}>Enter Macros Manually?</Text>
+        <Text style={styles.sectionLabel}>{t('form.manualMacros')}</Text>
         <Switch
           value={showMacros}
           onValueChange={setShowMacros}
@@ -186,10 +194,10 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       {showMacros && (
         <View style={styles.manualMacrosGrid}>
           {[
-            { key: 'cal', label: 'Calories', color: Colors.calories },
-            { key: 'p',   label: 'Protein',  color: Colors.protein },
-            { key: 'c',   label: 'Carbs',    color: Colors.carbs },
-            { key: 'f',   label: 'Fat',      color: Colors.fat },
+            { key: 'cal', label: t('macro.calories'), color: Colors.calories },
+            { key: 'p',   label: t('macro.protein'),  color: Colors.protein },
+            { key: 'c',   label: t('macro.carbs'),    color: Colors.carbs },
+            { key: 'f',   label: t('macro.fat'),      color: Colors.fat },
           ].map((m) => (
             <View key={m.key} style={styles.macroInputBox}>
               <Text style={[styles.macroInputLabel, { color: m.color }]}>{m.label}</Text>
@@ -209,7 +217,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Add to Meal</Text>
+        <Text style={styles.submitText}>{t('form.addToMeal')}</Text>
       </Pressable>
     </View>
   );

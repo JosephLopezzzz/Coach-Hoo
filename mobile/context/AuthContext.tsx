@@ -2,6 +2,8 @@ import React, {
   createContext, useContext, useEffect, useState, useCallback,
 } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY } from '../services/coachMessageService';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -61,8 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ─── Reset User (e.g., for fresh start) ───────────────────────────────────
+  // Also clears the saved language and any half-finished onboarding, so the
+  // next run starts on the language picker instead of silently reusing the old
+  // choice while showing a fresh onboarding flow.
   const resetUser = useCallback(async () => {
     await SecureStore.deleteItemAsync(USER_STORAGE_KEY);
+    try {
+      await AsyncStorage.multiRemove([LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY]);
+    } catch (e) {
+      console.error('Failed to clear language/onboarding state:', e);
+    }
     setUser(null);
   }, []);
 

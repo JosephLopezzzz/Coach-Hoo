@@ -9,6 +9,8 @@ import type { Meal, MealItem } from '../types';
 import { MEAL_TYPES } from '../constants/theme';
 import { RECIPES_DB } from '../services/api';
 import { useMeals } from '../context/MealContext';
+import { useLanguage } from '../context/LanguageContext';
+import { getMealTypeLabel, getCookingMethodLabel } from '../constants/i18n';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -20,6 +22,7 @@ interface MealSectionProps {
 }
 
 function ItemRow({ item }: { item: MealItem }) {
+  const { lang, t } = useLanguage();
   const [showRecipe, setShowRecipe] = useState(false);
   const isRecipe = item.source_type === 'recipe';
   const recipe = isRecipe ? RECIPES_DB.find((r) => r.id === item.source_id) : null;
@@ -47,14 +50,20 @@ function ItemRow({ item }: { item: MealItem }) {
             </Text>
             {isRecipe && (
               <View style={styles.recipeBadge}>
-                <Text style={styles.recipeBadgeText}>Recipe</Text>
+                <Text style={styles.recipeBadgeText}>{t('mealSection.recipe')}</Text>
               </View>
             )}
           </View>
           <Text style={styles.itemMeta}>
             {item.quantity_g}g
-            {item.cooking_method && item.cooking_method !== 'raw' ? ` · ${item.cooking_method}` : ''}
-            {item.bone_weight_g && item.bone_weight_g > 0 ? ` · 🦴 ${item.bone_weight_g}g bones` : (item.with_bones ? ' · with bones' : '')}
+            {item.cooking_method && item.cooking_method !== 'raw'
+              ? ` · ${getCookingMethodLabel(lang, item.cooking_method)}`
+              : ''}
+            {item.bone_weight_g && item.bone_weight_g > 0
+              ? ` · 🦴 ${t('mealSection.bones', { grams: item.bone_weight_g })}`
+              : item.with_bones
+                ? ` · ${t('mealSection.withBones')}`
+                : ''}
           </Text>
         </View>
         <View style={styles.itemRight}>
@@ -72,7 +81,9 @@ function ItemRow({ item }: { item: MealItem }) {
 
       {isRecipe && showRecipe && scaledIngredients.length > 0 && (
         <View style={styles.ingredientsList}>
-          <Text style={styles.ingredientsTitle}>Recipe Ingredients (scaled to {item.quantity_g}g portion):</Text>
+          <Text style={styles.ingredientsTitle}>
+            {t('mealSection.ingredients', { grams: item.quantity_g })}
+          </Text>
           <View style={styles.ingredientsGrid}>
             {scaledIngredients.map((ing, i) => (
               <View key={i} style={styles.ingredientItem}>
@@ -91,6 +102,7 @@ function ItemRow({ item }: { item: MealItem }) {
 
 export default function MealSection({ meal, onDelete }: MealSectionProps) {
   const { targets } = useMeals();
+  const { lang, t } = useLanguage();
   const [expanded, setExpanded] = useState(true);
 
   const mealMeta = MEAL_TYPES.find((m) => m.key === meal.meal_type) ?? MEAL_TYPES[0];
@@ -127,8 +139,12 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
       <Pressable style={styles.header} onPress={toggle}>
         <View style={styles.headerLeft}>
           <Ionicons name={mealMeta.icon as any} size={18} color={mealMeta.color} />
-          <Text style={[styles.mealType, { color: mealMeta.color }]}>{mealMeta.label}</Text>
-          <Text style={styles.itemCount}>{meal.items.length} items</Text>
+          <Text style={[styles.mealType, { color: mealMeta.color }]}>
+            {getMealTypeLabel(lang, mealMeta.key)}
+          </Text>
+          <Text style={styles.itemCount}>
+            {t('mealSection.itemCount', { count: meal.items.length })}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           <Text style={styles.totalCal}>{Math.round(totalCal)} kcal</Text>
@@ -152,14 +168,16 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
             <View style={styles.alignmentCard}>
               <View style={styles.alignmentHeaderRow}>
                 <Ionicons name="analytics" size={14} color={Colors.textSecondary} />
-                <Text style={styles.alignmentTitle}>Meal Macro Alignment ({Math.round(ratio * 100)}% daily target)</Text>
+                <Text style={styles.alignmentTitle}>
+                  {t('mealSection.alignment', { pct: Math.round(ratio * 100) })}
+                </Text>
               </View>
               <View style={styles.alignmentGrid}>
                 {[
-                  { label: 'Calories', current: totalCal, target: calTarget, pct: calPct, color: Colors.calories, unit: ' kcal' },
-                  { label: 'Protein', current: totalP, target: pTarget, pct: pPct, color: Colors.protein, unit: 'g' },
-                  { label: 'Carbs', current: totalC, target: cTarget, pct: cPct, color: Colors.carbs, unit: 'g' },
-                  { label: 'Fat', current: totalF, target: fTarget, pct: fPct, color: Colors.fat, unit: 'g' },
+                  { label: t('macro.calories'), current: totalCal, target: calTarget, pct: calPct, color: Colors.calories, unit: ' kcal' },
+                  { label: t('macro.protein'), current: totalP, target: pTarget, pct: pPct, color: Colors.protein, unit: 'g' },
+                  { label: t('macro.carbs'), current: totalC, target: cTarget, pct: cPct, color: Colors.carbs, unit: 'g' },
+                  { label: t('macro.fat'), current: totalF, target: fTarget, pct: fPct, color: Colors.fat, unit: 'g' },
                 ].map((m) => (
                   <View key={m.label} style={styles.alignmentItem}>
                     <View style={styles.alignmentItemHeader}>
@@ -180,7 +198,7 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
 
           <View style={styles.items}>
             {meal.items.length === 0 ? (
-              <Text style={styles.emptyText}>No items logged</Text>
+              <Text style={styles.emptyText}>{t('mealSection.noItems')}</Text>
             ) : (
               meal.items.map((item) => <ItemRow key={item.id} item={item} />)
             )}

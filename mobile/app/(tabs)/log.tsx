@@ -5,7 +5,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMeals } from '../../context/MealContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { getMealTypeLabel, getCookingMethodLabel } from '../../constants/i18n';
 import ManualEntryForm from '../../components/ManualEntryForm';
 import Toast from '../../components/Toast';
 import type { ToastData } from '../../components/Toast';
@@ -15,6 +18,8 @@ import { calculateApi } from '../../services/api';
 
 export default function LogMealScreen() {
   const { logMeal } = useMeals();
+  const { lang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [mealType, setMealType] = useState<string>('breakfast');
   const [items,    setItems]    = useState<LogItem[]>([]);
   const [preview,  setPreview]  = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
@@ -46,23 +51,30 @@ export default function LogMealScreen() {
 
   const handleSubmit = async () => {
     if (items.length === 0) {
-      setToast({ id: 'no-items', type: 'error', title: 'No items', subtitle: 'Add at least one food item before logging.' });
+      setToast({
+        id: 'no-items',
+        type: 'error',
+        title: t('log.noItemsTitle'),
+        subtitle: t('log.noItemsBody'),
+      });
       return;
     }
     setLoading(true);
     try {
       await logMeal(mealType, items);
-      const toastSubtitle = items.length === 1
-        ? `${mealType} logged with ${items.length} item`
-        : `${mealType} logged with ${items.length} items`;
+      const mealLabel = getMealTypeLabel(lang, mealType);
+      const toastSubtitle = t(
+        items.length === 1 ? 'log.successBody' : 'log.successBodyPlural',
+        { mealType: mealLabel, count: items.length },
+      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setToast({ id: 'success', type: 'success', title: 'Meal logged!', subtitle: `🎉 ${toastSubtitle}` });
+      setToast({ id: 'success', type: 'success', title: t('log.successTitle'), subtitle: `🎉 ${toastSubtitle}` });
       setItems([]);
       setPreview(null);
     } catch (err: any) {
       console.error('[LogMeal] Submit failed:', err.response?.data ?? err.message);
-      const errorMsg = err.response?.data?.error ?? err.message ?? 'Could not log meal.';
-      setToast({ id: 'error', type: 'error', title: 'Logging Failed', subtitle: errorMsg });
+      const errorMsg = err.response?.data?.error ?? err.message ?? t('log.failedBody');
+      setToast({ id: 'error', type: 'error', title: t('log.failedTitle'), subtitle: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -72,8 +84,8 @@ export default function LogMealScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Log Meal</Text>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+        <Text style={styles.title}>{t('log.title')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
           {MEAL_TYPES.map((mt) => (
             <Pressable
@@ -83,7 +95,7 @@ export default function LogMealScreen() {
             >
               <Ionicons name={mt.icon as any} size={16} color={mealType === mt.key ? mt.color : Colors.textMuted} />
               <Text style={[styles.mealTypeText, mealType === mt.key && { color: mt.color }]}>
-                {mt.label}
+                {getMealTypeLabel(lang, mt.key)}
               </Text>
             </Pressable>
           ))}
@@ -93,10 +105,10 @@ export default function LogMealScreen() {
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {items.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Items to Log ({items.length})</Text>
+            <Text style={styles.sectionTitle}>{t('log.itemsToLog', { count: items.length })}</Text>
             {items.map((item, idx) => {
               const label = item.type === 'manual'
-                ? `${(item as any).food_type} · ${(item as any).method ?? 'raw'} · ${item.quantity_g}g${(item as any).bone_weight_g && (item as any).bone_weight_g > 0 ? ` · 🦴 ${(item as any).bone_weight_g}g` : ((item as any).with_bones ? ' · 🦴' : '')}`
+                ? `${(item as any).food_type} · ${getCookingMethodLabel(lang, (item as any).method ?? 'raw')} · ${item.quantity_g}g${(item as any).bone_weight_g && (item as any).bone_weight_g > 0 ? ` · 🦴 ${(item as any).bone_weight_g}g` : ((item as any).with_bones ? ' · 🦴' : '')}`
                 : `${item.type} · ${item.quantity_g}g`;
               return (
                 <View key={idx} style={styles.pendingItem}>
@@ -110,7 +122,7 @@ export default function LogMealScreen() {
             {preview && (
               <View style={styles.previewRow}>
                 {[
-                  { label: 'kcal', value: preview.calories, color: Colors.calories },
+                  { label: t('macro.kcal'), value: preview.calories, color: Colors.calories },
                   { label: 'P',    value: preview.protein,  color: Colors.protein },
                   { label: 'C',    value: preview.carbs,    color: Colors.carbs },
                   { label: 'F',    value: preview.fat,      color: Colors.fat },
@@ -126,7 +138,7 @@ export default function LogMealScreen() {
         )}
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Manual Entry</Text>
+          <Text style={styles.sectionTitle}>{t('log.manualEntry')}</Text>
           <ManualEntryForm onSubmit={addItem} />
         </View>
 
@@ -139,7 +151,9 @@ export default function LogMealScreen() {
             ? <ActivityIndicator color={Colors.textInverse} />
             : <>
                 <Ionicons name="checkmark-circle-outline" size={20} color={Colors.textInverse} />
-                <Text style={styles.submitText}>Log {mealType} ({items.length} items)</Text>
+                <Text style={styles.submitText}>
+                  {t('log.submit', { mealType: getMealTypeLabel(lang, mealType), count: items.length })}
+                </Text>
               </>
           }
         </Pressable>
@@ -152,7 +166,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
     gap: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,

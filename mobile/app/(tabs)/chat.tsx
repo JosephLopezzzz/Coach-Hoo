@@ -6,9 +6,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMeals } from '../../context/MealContext';
 import { useAuth } from '../../context/AuthContext';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
+import { useLanguage } from '../../context/LanguageContext';
+import { getMealTypeLabel, getGoalLabel, labelForOptionKey } from '../../constants/i18n';
+import type { StringKey } from '../../constants/strings';
+import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import { FOODS_DB, RECIPES_DB, RESTAURANT_DB, calculateItemMacros, recommendApi } from '../../services/api';
 
 // ─── Mascot Image Map (root-level high-res for header) ───────────────────────
@@ -39,13 +43,50 @@ interface Message {
   mascotState?: MascotState;
 }
 
-const QUICK_SUGGESTIONS = [
-  'Log 150g grilled chicken breast',
-  'Log 200g of rice for lunch',
-  'What meals should I eat in order to meet my remaining kcal?',
-  'Suggest a meal',
-  'Do you have any meal strategies?',
-  'What are my allergies?',
+// ─── Parser vocabularies (English + Filipino) ────────────────────────────────
+/** Words that name a meal slot rather than a food, so they never count as a food match. */
+const MEAL_WORDS = [
+  'food', 'eat', 'ate', 'meal', 'lunch', 'breakfast', 'dinner', 'snack',
+  'pagkain', 'kumain', 'kain', 'almusal', 'agahan', 'tanghalian', 'hapunan', 'meryenda', 'merienda',
+];
+
+/** Food nouns the parser recognises. Filipino spellings sit alongside English. */
+const FOOD_KEYWORDS = [
+  ...MEAL_WORDS,
+  'pork', 'baboy', 'beef', 'baka', 'chicken', 'manok', 'rice', 'kanin', 'bigas',
+  'egg', 'itlog', 'tofu', 'tokwa', 'fish', 'isda', 'tilapia', 'bangus',
+  'shrimp', 'hipon', 'squid', 'pusit',
+  'adobo', 'sinigang', 'tinola', 'kare-kare',
+  'milk', 'gatas', 'juice', 'soda', 'coke', 'coffee', 'kape', 'tea', 'tsaa',
+  'drink', 'inumin', 'beverage', 'shake', 'water', 'tubig',
+  'broccoli', 'spinach', 'kangkong', 'cabbage', 'repolyo', 'potato', 'patatas',
+  'vegetable', 'gulay',
+  'banana', 'saging', 'apple', 'mansanas', 'mango', 'mangga', 'avocado',
+  'orange', 'dalandan', 'calamansi', 'fruit', 'prutas',
+  'oil', 'mantika', 'butter', 'mantikilya', 'cheese', 'keso',
+  'mayo', 'mayonnaise', 'sauce', 'sarsa', 'ketchup', 'peanut', 'mani', 'peanut butter',
+];
+
+/** Cooking method key → words that imply it, longest/most specific first. */
+const COOKING_ALIASES: Record<string, string[]> = {
+  deep_fried: ['deep-fried', 'deep fried', 'malalim na pagprito'],
+  boiled:     ['boiled', 'nilaga', 'nilagang', 'pinakuluan'],
+  steamed:    ['steamed', 'pinasingawan', 'siniksik'],
+  grilled:    ['grilled', 'inihaw', 'inihaw na', 'ihaw'],
+  baked:      ['baked', 'hinurno', 'niluto sa oven'],
+  fried:      ['fried', 'pinirito', 'prito', 'piniritong'],
+  sauteed:    ['sauteed', 'ginisa', 'ginisang', 'sinangag'],
+  stewed:     ['stewed', 'nilagang ulam', 'inihalo'],
+  roasted:    ['roasted', 'inasado', 'litson', 'lechon'],
+};
+
+const QUICK_SUGGESTION_KEYS: StringKey[] = [
+  'chat.suggestion.logChicken',
+  'chat.suggestion.logRice',
+  'chat.suggestion.remaining',
+  'chat.suggestion.suggestMeal',
+  'chat.suggestion.strategies',
+  'chat.suggestion.allergies',
 ];
 
 export default function ChatScreen() {
@@ -60,19 +101,21 @@ export default function ChatScreen() {
 
   const { logMeal, deleteMeal, totals, targets, remaining, meals } = useMeals();
   const { user } = useAuth();
-  
-  const [messages, setMessages] = useState<Message[]>([
+  const { lang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
+
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: 'welcome',
       sender: 'coach',
-      text: `Cluck cluck! Hello ${user?.full_name?.split(' ')[0] ?? 'there'}! I'm Coach Hoo, your personal macro-tracking chicken mascot! 🐔\n\nTell me what you ate (e.g. "I ate 150g of roasted chicken") and I'll parse it and log it for you. You can even specify bones, like "chicken thigh with 20g bones"!`,
+      text: t('chat.welcome', { name: user?.full_name?.split(' ')[0] ?? t('coach.friend') }),
       timestamp: new Date(),
       mascotState: 'idle',
     }
   ]);
   const [inputText, setInputText] = useState('');
   const [mascotState, setMascotState] = useState<MascotState>('idle');
-  const [mascotStatusText, setMascotStatusText] = useState('Feeling motivated!');
+  const [mascotStatusKey, setMascotStatusKey] = useState<StringKey>('chat.statusMotivated');
   const [isTyping, setIsTyping] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
@@ -122,8 +165,8 @@ export default function ChatScreen() {
   }, [isTyping]);
 
   // ─── Mascot State Animation ────────────────────────────────────────────────
-  const changeMascotState = (newState: MascotState, statusMsg: string) => {
-    setMascotStatusText(statusMsg);
+  const changeMascotState = (newState: MascotState, statusKey: StringKey) => {
+    setMascotStatusKey(statusKey);
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 0.3, duration: 150, useNativeDriver: true }),
       Animated.timing(scaleAnim, { toValue: 0.85, duration: 150, useNativeDriver: true })
@@ -141,11 +184,13 @@ export default function ChatScreen() {
     // Check if it's late night (after 10 PM)
     const hour = new Date().getHours();
     if (hour >= 22 || hour < 5) {
-      changeMascotState('sleeppp', 'Getting sleepy... Zzz');
+      changeMascotState('sleeppp', 'chat.statusSleepy');
     }
   }, []);
 
   // ─── Offline NLP Parser ───────────────────────────────────────────────────
+  // Keyword lists carry both English and Filipino spellings so the parser works
+  // regardless of the UI language — users mix both in practice.
   const parseChatMessage = (text: string) => {
     const clean = text.toLowerCase().trim();
 
@@ -156,12 +201,18 @@ export default function ChatScreen() {
     else if (hour >= 11 && hour < 15) meal_type = 'lunch';
     else if (hour >= 17 && hour < 21) meal_type = 'dinner';
 
-    if (clean.includes('breakfast') || clean.includes('morning')) meal_type = 'breakfast';
-    else if (clean.includes('lunch') || clean.includes('noon') || clean.includes('afternoon')) meal_type = 'lunch';
-    else if (clean.includes('dinner') || clean.includes('evening') || clean.includes('night')) meal_type = 'dinner';
-    else if (clean.includes('snack')) meal_type = 'snack';
+    const has = (words: string[]) => words.some((w) => clean.includes(w));
+    const BREAKFAST_WORDS = ['breakfast', 'morning', 'almusal', 'agahan', 'umaga'];
+    const LUNCH_WORDS     = ['lunch', 'noon', 'afternoon', 'tanghalian', 'hapon'];
+    const DINNER_WORDS    = ['dinner', 'evening', 'night', 'hapunan', 'gabi'];
+    const SNACK_WORDS     = ['snack', 'meryenda', 'merienda'];
 
-    const chunks = clean.split(/\s+and\s+|,|\s+also\s+|\s+with\s+/);
+    if (has(BREAKFAST_WORDS)) meal_type = 'breakfast';
+    else if (has(LUNCH_WORDS)) meal_type = 'lunch';
+    else if (has(DINNER_WORDS)) meal_type = 'dinner';
+    else if (has(SNACK_WORDS)) meal_type = 'snack';
+
+    const chunks = clean.split(/\s+and\s+|\s+at\s+|,|\s+also\s+|\s+with\s+|\s+na may\s+|\s+may\s+/);
     const parsedItems: any[] = [];
     let missingGramsKeyword: string | null = null;
 
@@ -170,14 +221,14 @@ export default function ChatScreen() {
 
       // Bone weight extraction
       let bone_weight_g: number | undefined = undefined;
-      const boneMatch = chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams)?\s*of\s*bones?\b/) ||
-                        chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams)?\s*bones?\b/);
+      const boneMatch = chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams|gramo)?\s*(?:of|ng)\s*(?:bones?|buto)\b/) ||
+                        chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams|gramo)?\s*(?:bones?|buto)\b/);
       if (boneMatch) {
         bone_weight_g = parseFloat(boneMatch[1]);
       }
 
       // Grams extraction
-      const gramMatch = chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams)\b/);
+      const gramMatch = chunk.match(/(\d+(?:\.\d+)?)\s*(?:g|grams|gramo)\b/);
       if (!gramMatch) {
         if (bone_weight_g !== undefined && parsedItems.length > 0) {
           parsedItems[parsedItems.length - 1].bone_weight_g = bone_weight_g;
@@ -185,17 +236,9 @@ export default function ChatScreen() {
         }
 
         // Check if they mentioned a food keyword but forgot weight in grams
-        const foodKeywords = [
-          'pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid',
-          'adobo', 'sinigang', 'tinola', 'kare-kare', 'food', 'eat', 'ate', 'meal', 'lunch', 'breakfast',
-          'dinner', 'snack', 'milk', 'juice', 'soda', 'coke', 'coffee', 'tea', 'drink', 'beverage',
-          'shake', 'water', 'broccoli', 'spinach', 'kangkong', 'cabbage', 'potato', 'vegetable',
-          'banana', 'apple', 'mango', 'avocado', 'orange', 'calamansi', 'fruit',
-          'oil', 'butter', 'cheese', 'mayo', 'mayonnaise', 'sauce', 'ketchup', 'peanut', 'peanut butter'
-        ];
-        for (const kw of foodKeywords) {
+        for (const kw of FOOD_KEYWORDS) {
           if (chunk.includes(kw)) {
-            if (!['food', 'eat', 'ate', 'meal', 'lunch', 'breakfast', 'dinner', 'snack'].includes(kw)) {
+            if (!MEAL_WORDS.includes(kw)) {
               missingGramsKeyword = kw;
             }
           }
@@ -206,10 +249,9 @@ export default function ChatScreen() {
 
       // Cooking method extraction
       let cooking_method = 'raw';
-      const methods = ['boiled', 'steamed', 'grilled', 'baked', 'fried', 'deep-fried', 'deep fried', 'sauteed', 'stewed', 'roasted'];
-      for (const m of methods) {
-        if (chunk.includes(m)) {
-          cooking_method = m.replace(' ', '_');
+      for (const [method, words] of Object.entries(COOKING_ALIASES)) {
+        if (words.some((w) => chunk.includes(w))) {
+          cooking_method = method;
           break;
         }
       }
@@ -249,14 +291,8 @@ export default function ChatScreen() {
       // Fallback to manual food type keyword
       if (!matchedItem) {
         let foodType = 'chicken';
-        const foodKeywords = [
-          'pork', 'beef', 'chicken', 'rice', 'egg', 'tofu', 'fish', 'tilapia', 'shrimp', 'squid',
-          'adobo', 'sinigang', 'tinola', 'kare-kare', 'milk', 'juice', 'soda', 'coke', 'coffee', 'tea',
-          'drink', 'beverage', 'shake', 'water', 'broccoli', 'spinach', 'kangkong', 'cabbage', 'potato',
-          'vegetable', 'banana', 'apple', 'mango', 'avocado', 'orange', 'calamansi', 'fruit',
-          'oil', 'butter', 'cheese', 'mayo', 'mayonnaise', 'sauce', 'ketchup', 'peanut', 'peanut butter'
-        ];
-        for (const kw of foodKeywords) {
+        for (const kw of FOOD_KEYWORDS) {
+          if (MEAL_WORDS.includes(kw)) continue;
           if (chunk.includes(kw)) {
             foodType = kw;
             break;
@@ -266,7 +302,7 @@ export default function ChatScreen() {
       }
 
       // If we matched "bones" fallback manually but it's really bones
-      if (matchedItem.type === 'manual' && matchedItem.name === 'chicken' && chunk.includes('bone')) {
+      if (matchedItem.type === 'manual' && matchedItem.name === 'chicken' && (chunk.includes('bone') || chunk.includes('buto'))) {
           if (parsedItems.length > 0) {
               parsedItems[parsedItems.length - 1].bone_weight_g = bone_weight_g || quantity_g;
               continue;
@@ -290,19 +326,19 @@ export default function ChatScreen() {
     }
 
     // Conversational Checks
-    const isEditMeal = /change.*to|meant|actually|instead|those in|that in|for (breakfast|lunch|dinner|snack)/i.test(clean);
+    const isEditMeal = /change.*to|meant|actually|instead|those in|that in|palitan|ibahin|ilipat|for (breakfast|lunch|dinner|snack)/i.test(clean);
     if (isEditMeal) {
-      if (clean.includes('breakfast') || clean.includes('morning')) return { type: 'edit_meal', new_meal_type: 'breakfast' };
-      if (clean.includes('lunch') || clean.includes('noon')) return { type: 'edit_meal', new_meal_type: 'lunch' };
-      if (clean.includes('dinner') || clean.includes('evening') || clean.includes('night')) return { type: 'edit_meal', new_meal_type: 'dinner' };
-      if (clean.includes('snack')) return { type: 'edit_meal', new_meal_type: 'snack' };
+      if (has(BREAKFAST_WORDS)) return { type: 'edit_meal', new_meal_type: 'breakfast' };
+      if (has(LUNCH_WORDS)) return { type: 'edit_meal', new_meal_type: 'lunch' };
+      if (has(DINNER_WORDS)) return { type: 'edit_meal', new_meal_type: 'dinner' };
+      if (has(SNACK_WORDS)) return { type: 'edit_meal', new_meal_type: 'snack' };
     }
 
-    if (/strategies|strategy|guide/.test(clean)) {
+    if (/strategies|strategy|guide|estratehiya|plano|paano/.test(clean)) {
       return { type: 'strategy' };
     }
 
-    if (/recommend|suggest|ideas|what\s+(?:meals?\s+)?(?:should|can)\s+i\s+eat/.test(clean)) {
+    if (/recommend|suggest|ideas|magmungkahi|mungkahi|irekomenda|anong (?:dapat|pwede|puwede)|what\s+(?:meals?\s+)?(?:should|can)\s+i\s+eat/.test(clean)) {
       return { type: 'recommendation' };
     }
 
@@ -310,22 +346,22 @@ export default function ChatScreen() {
       return { type: 'allergy_query' };
     }
 
-    if (/weight|weigh|heavy|lbs|kg/.test(clean)) {
+    if (/weight|weigh|heavy|lbs|kg|timbang|bigat/.test(clean)) {
       return { type: 'weight_query' };
     }
-    if (/profile|height|age|gender|sex|country|goal|about me/.test(clean)) {
+    if (/profile|height|age|gender|sex|country|goal|about me|taas|edad|kasarian|bansa|layunin|tungkol sa akin/.test(clean)) {
       return { type: 'profile_query' };
     }
-    if (/what did i eat|logged|history|my meals|past meals|what i ate|show meals/.test(clean)) {
+    if (/what did i eat|logged|history|my meals|past meals|what i ate|show meals|ano.*kinain|kinain ko|mga pagkain ko|kasaysayan/.test(clean)) {
       return { type: 'meals_query' };
     }
-    if (/macro|calories|status|report|today|progress|remaining|how am i doing/.test(clean)) {
+    if (/macro|calories|status|report|today|progress|remaining|how am i doing|ngayong araw|progreso|natitira|kumusta ako/.test(clean)) {
       return { type: 'report' };
     }
-    if (/tip|help|advice/.test(clean)) {
+    if (/tip|help|advice|tulong|payo/.test(clean)) {
       return { type: 'general_chat' };
     }
-    if (clean.match(/\b(hello|hi|hey|greetings|morning|afternoon|evening|yo|whats up|howdy|sup)\b/)) {
+    if (clean.match(/\b(hello|hi|hey|greetings|morning|afternoon|evening|yo|whats up|howdy|sup|kumusta|kamusta|musta|magandang umaga|magandang hapon|magandang gabi)\b/)) {
       return { type: 'greeting' };
     }
 
@@ -358,73 +394,107 @@ export default function ChatScreen() {
       const parsed = parseChatMessage(textToSend);
       let coachResponseText = '';
       let nextMascot: MascotState = 'idle';
-      let nextStatus = 'Feeling motivated!';
+      let nextStatus: StringKey = 'chat.statusMotivated';
 
       // Check for late night sleepiness override first
       const hour = new Date().getHours();
       const isLate = hour >= 22 || hour < 5;
+      const firstName = user?.full_name?.split(' ')[0] ?? t('coach.friend');
 
       if (!parsed || parsed.type === 'out_of_domain') {
-        coachResponseText = `Cluck? Coach Hoo is here to help with your fitness journey! 🐔✨\n\nI can help you log foods, track your weight, display macro targets, or view today's progress.\n\nTry asking me:\n- "What is my weight?"\n- "How are my macros today?"\n- "Log 150g grilled chicken breast"\n- "Show my profile details"`;
+        coachResponseText = t('chat.outOfDomain');
         nextMascot = isLate ? 'sleeppp' : 'worry';
-        nextStatus = isLate ? 'Getting sleepy... Zzz' : 'Ready to help!';
+        nextStatus = isLate ? 'chat.statusSleepy' : 'chat.statusReady';
       } else if (parsed.type === 'greeting') {
-        const timeOfDay = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-        coachResponseText = `Cluck cluck! Good ${timeOfDay}, ${user?.full_name?.split(' ')[0] ?? 'friend'}! 🐔✨\n\nCoach Hoo is feeling motivated and ready to help you track your progress. Let me know what you'd like to check or log today!`;
+        const timeOfDay = hour < 12 ? t('chat.timeMorning') : hour < 18 ? t('chat.timeAfternoon') : t('chat.timeEvening');
+        coachResponseText = t('chat.greetingReply', { timeOfDay, name: firstName });
         nextMascot = isLate ? 'sleeppp' : 'idle';
-        nextStatus = isLate ? 'Yawning...' : 'Happy clucking!';
+        nextStatus = isLate ? 'chat.statusYawning' : 'chat.statusHappy';
       } else if (parsed.type === 'weight_query') {
         if (user?.weight_kg) {
-          coachResponseText = `Cluck! According to my records, your current weight is **${user.weight_kg} kg** (approx. ${Math.round(user.weight_kg * 2.20462)} lbs). 🐔⚖️\n\nYour goal is to **${user.goal || 'maintain'}** weight. Keep up the amazing effort!`;
+          coachResponseText = t('chat.weightReply', {
+            kg: user.weight_kg,
+            lbs: Math.round(user.weight_kg * 2.20462),
+            goal: getGoalLabel(lang, user.goal || 'maintain'),
+          });
           nextMascot = isLate ? 'sleeppp' : 'idle';
-          nextStatus = 'Monitoring weight progress!';
+          nextStatus = 'chat.statusWeight';
         } else {
-          coachResponseText = `Cluck! I don't see a weight recorded in your profile yet. You can set your weight in the Profile tab! 🐔`;
+          coachResponseText = t('chat.noWeight');
           nextMascot = isLate ? 'sleeppp' : 'worry';
-          nextStatus = 'A bit worried...';
+          nextStatus = 'chat.statusWorried';
         }
       } else if (parsed.type === 'profile_query') {
+        const notSet = t('common.notSet');
         const condition = !user?.health_condition || user?.health_condition === 'none'
-          ? 'None'
+          ? t('common.none')
           : user?.health_condition === 'others'
-            ? (user?.health_condition_custom || 'Other condition')
-            : user?.health_condition.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        const allergiesStr = user?.allergies?.length ? user.allergies.map((a: string) => a.charAt(0).toUpperCase() + a.slice(1)).join(', ') : 'None';
-        coachResponseText = `Bawk! Here is what Coach Hoo knows about your profile: 🐔\n\n👤 **Name**: ${user?.full_name ?? 'Not set'}\n🎂 **Age**: ${user?.age ?? 'Not set'} years old\n📏 **Height**: ${user?.height_cm ?? 'Not set'} cm\n⚖️ **Weight**: ${user?.weight_kg ?? 'Not set'} kg\n🎯 **Goal**: ${user?.goal === 'lose' ? 'Lose weight' : user?.goal === 'gain' ? 'Gain weight' : user?.goal === 'maintain' ? 'Maintain weight' : 'Not set'}\n🌍 **Country**: ${user?.country ?? 'Not set'}\n🏥 **Health Condition**: ${condition}\n🚫 **Allergies**: ${allergiesStr}\n\nNeed to make changes? Head over to the Profile tab! ✨`;
+            ? (user?.health_condition_custom || t('profile.otherCondition'))
+            : labelForOptionKey(lang, user.health_condition);
+        const allergiesStr = user?.allergies?.length
+          ? user.allergies.map((a: string) => labelForOptionKey(lang, a)).join(', ')
+          : t('common.none');
+        coachResponseText = t('chat.profileReply', {
+          name: user?.full_name ?? notSet,
+          age: user?.age ? t('profile.ageValue', { age: user.age }) : notSet,
+          height: user?.height_cm ?? notSet,
+          weight: user?.weight_kg ?? notSet,
+          goal: user?.goal ? getGoalLabel(lang, user.goal) : notSet,
+          country: user?.country ?? notSet,
+          condition,
+          allergies: allergiesStr,
+        });
         nextMascot = isLate ? 'sleeppp' : 'idle';
-        nextStatus = 'Reviewing profile!';
+        nextStatus = 'chat.statusProfile';
       } else if (parsed.type === 'meals_query') {
         if (!meals || meals.length === 0) {
-          coachResponseText = `Cluck! You haven't logged any meals today yet. 🐔\n\nTell me what you ate (e.g., "Log 150g grilled chicken breast") and I'll list it here!`;
+          coachResponseText = t('chat.noMeals');
           nextMascot = isLate ? 'sleeppp' : 'idle';
-          nextStatus = 'Waiting for meal logs!';
+          nextStatus = 'chat.statusWaitingLog';
         } else {
-          let mealList = `Bawk! Here are your logged meals for today: 🐔🍗\n\n`;
+          let mealList = `${t('chat.mealsHeader')}\n\n`;
           meals.forEach((m) => {
             const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            mealList += `🍳 **${m.meal_type.toUpperCase()}** (at ${time}):\n`;
+            const mealLabel = getMealTypeLabel(lang, m.meal_type).toUpperCase();
+            mealList += `🍳 **${t('chat.mealAtTime', { mealType: mealLabel, time })}**\n`;
             m.items.forEach((item) => {
-              mealList += `- ${item.food_name || 'Item'} (${item.quantity_g}g${item.with_bones ? `, minus ${item.bone_weight_g}g bones` : ''})\n`;
+              const bones = item.with_bones ? t('chat.minusBones', { grams: item.bone_weight_g ?? 0 }) : '';
+              mealList += `- ${item.food_name || t('mealSection.item')} (${item.quantity_g}g${bones})\n`;
             });
             mealList += `\n`;
           });
           coachResponseText = mealList.trim();
           nextMascot = isLate ? 'sleeppp' : 'streak';
-          nextStatus = 'Reviewing today\'s menu!';
+          nextStatus = 'chat.statusMenu';
         }
       } else if (parsed.type === 'missing_grams') {
-        coachResponseText = `Cluck? Coach Hoo noticed you mentioned **${(parsed as any).foodKeyword}**, but I didn't see the quantity in grams! 🥺\n\nCould you specify the weight in grams? For example:\n- "Log 150g ${(parsed as any).foodKeyword}"\n- "I ate 200g of ${(parsed as any).foodKeyword} for lunch"`;
+        coachResponseText = t('chat.missingGrams', { food: (parsed as any).foodKeyword });
         nextMascot = isLate ? 'sleeppp' : 'worry';
-        nextStatus = 'Waiting for weight in grams...';
+        nextStatus = 'chat.statusWaitingGrams';
       } else if (parsed.type === 'report') {
         const calTarget = targets?.calories_target ?? 2000;
         const pTarget = targets?.protein_target ?? 150;
         const cTarget = targets?.carbs_target ?? 200;
         const fTarget = targets?.fat_target ?? 65;
+        const hitProtein = totals.protein >= pTarget;
 
-        coachResponseText = `Here is your Daily Macro Report, cluck! 🐔\n\n🔥 **Calories**: ${Math.round(totals.calories)} / ${calTarget} kcal (Remaining: ${Math.round(remaining?.calories ?? 0)} kcal)\n🍗 **Protein**: ${Math.round(totals.protein)}g / ${pTarget}g\n🌾 **Carbs**: ${Math.round(totals.carbs)}g / ${cTarget}g\n🥑 **Fat**: ${Math.round(totals.fat)}g / ${fTarget}g\n\n${totals.protein >= pTarget ? 'Bawk bawk! You hit your protein goal! Coach Hoo is flexing! 🐔💪' : 'Peck at that protein! You still need ' + Math.round(Math.max(0, pTarget - totals.protein)) + 'g more!'}`;
-        nextMascot = totals.protein >= pTarget ? 'flex' : (isLate ? 'sleeppp' : 'idle');
-        nextStatus = totals.protein >= pTarget ? 'Flexing those feathers!' : (isLate ? 'Sleepy bawk...' : 'Keeping watch on macros!');
+        const body = t('chat.reportBody', {
+          cal: Math.round(totals.calories),
+          calTarget,
+          calRem: Math.round(remaining?.calories ?? 0),
+          p: Math.round(totals.protein),
+          pTarget,
+          c: Math.round(totals.carbs),
+          cTarget,
+          f: Math.round(totals.fat),
+          fTarget,
+        });
+        const verdict = hitProtein
+          ? t('chat.proteinHit')
+          : t('chat.proteinNeeded', { grams: Math.round(Math.max(0, pTarget - totals.protein)) });
+        coachResponseText = `${t('chat.reportHeader')}\n\n${body}\n\n${verdict}`;
+        nextMascot = hitProtein ? 'flex' : (isLate ? 'sleeppp' : 'idle');
+        nextStatus = hitProtein ? 'chat.statusFlexing' : (isLate ? 'chat.statusSleepyBawk' : 'chat.statusMacros');
       } else if (parsed.type === 'edit_meal') {
         if (meals && meals.length > 0) {
            const lastMeal = meals[meals.length - 1];
@@ -439,14 +509,15 @@ export default function ChatScreen() {
                with_bones: it.with_bones,
                bone_weight_g: it.bone_weight_g,
            }));
-           await logMeal(parsed.new_meal_type || 'snack', itemsToRelog);
-           coachResponseText = `Bawk! I've moved your last meal to **${parsed.new_meal_type || 'snack'}**! 🐔✅`;
+           const newType = parsed.new_meal_type || 'snack';
+           await logMeal(newType, itemsToRelog);
+           coachResponseText = t('chat.mealMoved', { mealType: getMealTypeLabel(lang, newType) });
            nextMascot = 'streak';
-           nextStatus = 'Updated log!';
+           nextStatus = 'chat.statusUpdated';
         } else {
-           coachResponseText = `Cluck? I don't see any meals logged today to change! 🐔`;
+           coachResponseText = t('chat.noMealsToEdit');
            nextMascot = 'worry';
-           nextStatus = 'Confused cluck...';
+           nextStatus = 'chat.statusConfused';
         }
       } else if (parsed.type === 'recommendation' || parsed.type === 'strategy') {
           const remCals = remaining?.calories ? Math.max(0, remaining.calories) : (targets?.calories_target ?? 500);
@@ -454,18 +525,23 @@ export default function ChatScreen() {
           const healthCond = user?.health_condition ?? 'none';
           const healthCustom = user?.health_condition_custom ?? '';
 
-          // Build health-condition context note
-          const conditionNotes: Record<string, string> = {
-            diabetes: '🩺 Since you have **Diabetes**, I\'m prioritizing low-GI, low-sugar options.',
-            hypertension: '🩺 Since you have **Hypertension**, I\'m recommending low-sodium meals.',
-            kidney_disease: '🩺 Since you have **Kidney Disease**, I\'m keeping protein moderate and avoiding high-phosphorus foods.',
-            others: healthCustom ? `🩺 Noted your condition: **${healthCustom}**. I\'ll keep recommendations as balanced as possible.` : '',
-          };
-          const conditionNote = conditionNotes[healthCond] ?? '';
+          // Build health-condition context note. The keys here are the ones the
+          // onboarding select actually persists (see HEALTH_GROUP_SPEC).
+          const conditionNoteKey: StringKey | undefined =
+            ['type1_diabetes', 'type2_diabetes', 'prediabetes'].includes(healthCond) ? 'chat.condDiabetes'
+            : healthCond === 'high_blood_pressure' ? 'chat.condHypertension'
+            : ['ckd', 'kidney_stones'].includes(healthCond) ? 'chat.condKidney'
+            : undefined;
+          const conditionNote = conditionNoteKey
+            ? t(conditionNoteKey)
+            : (healthCond === 'other' || healthCond === 'others') && healthCustom
+              ? t('chat.condOther', { condition: healthCustom })
+              : '';
 
           // Allergy note
+          const allergenLabels = userAllergies.map((a) => labelForOptionKey(lang, a)).join(', ');
           const allergyNote = userAllergies.length > 0
-            ? `🚫 Filtering out recipes with: **${userAllergies.join(', ')}**`
+            ? t('chat.filteringOut', { allergens: allergenLabels })
             : '';
 
           const loggedMealTypes = meals?.map(m => m.meal_type) || [];
@@ -474,50 +550,52 @@ export default function ChatScreen() {
           const hasDinner = loggedMealTypes.includes('dinner');
 
           let remainingMealsToEat = 0;
-          const mealsLeft = [];
-          if (!hasBreakfast) { remainingMealsToEat++; mealsLeft.push('Breakfast'); }
-          if (!hasLunch) { remainingMealsToEat++; mealsLeft.push('Lunch'); }
-          if (!hasDinner) { remainingMealsToEat++; mealsLeft.push('Dinner'); }
-          
+          const mealsLeft: string[] = [];
+          if (!hasBreakfast) { remainingMealsToEat++; mealsLeft.push(getMealTypeLabel(lang, 'breakfast')); }
+          if (!hasLunch) { remainingMealsToEat++; mealsLeft.push(getMealTypeLabel(lang, 'lunch')); }
+          if (!hasDinner) { remainingMealsToEat++; mealsLeft.push(getMealTypeLabel(lang, 'dinner')); }
+
           if (remainingMealsToEat === 0) {
               remainingMealsToEat = 1;
-              mealsLeft.push('Snack');
+              mealsLeft.push(getMealTypeLabel(lang, 'snack'));
           }
 
           const caloriesPerRemainingMeal = remCals / remainingMealsToEat;
           const contextLines = [conditionNote, allergyNote].filter(Boolean).join('\n');
 
           if (parsed.type === 'strategy') {
-              let stratText = `Cluck! You have **${Math.round(remCals)} kcal** left for the day.\n\n`;
+              let stratText = `${t('chat.stratHeader', { kcal: Math.round(remCals) })}\n\n`;
               if (contextLines) stratText += `${contextLines}\n\n`;
               if (remainingMealsToEat > 1) {
-                  stratText += `Since you still need to eat **${mealsLeft.join(' and ')}**, I recommend splitting your calories:\n\n`;
-                  stratText += `Aim for about **${Math.round(caloriesPerRemainingMeal)} kcal** per meal. Try to prioritize protein in each!\n\n`;
-                  stratText += `You can say *"Suggest a meal"* to get a recipe for your next meal!`;
+                  stratText += t('chat.stratSplit', {
+                    meals: mealsLeft.join(` ${t('common.and')} `),
+                    perMeal: Math.round(caloriesPerRemainingMeal),
+                  });
               } else {
-                  stratText += `You only have **${mealsLeft[0]}** left! You can use all **${Math.round(remCals)} kcal** on it. Focus on hitting your remaining protein target of ${Math.round(Math.max(0, (targets?.protein_target ?? 0) - (totals?.protein || 0)))}g.\n\n`;
-                  stratText += `Say *"Suggest a meal"* for ideas!`;
+                  stratText += t('chat.stratSingle', {
+                    meal: mealsLeft[0],
+                    kcal: Math.round(remCals),
+                    protein: Math.round(Math.max(0, (targets?.protein_target ?? 0) - (totals?.protein || 0))),
+                  });
               }
               coachResponseText = stratText;
               nextMascot = 'streak';
-              nextStatus = 'Strategizing!';
+              nextStatus = 'chat.statusStrategy';
           } else {
               try {
                   const res = await recommendApi.meals(undefined, 3, caloriesPerRemainingMeal, userAllergies);
                   const recs = res.data;
-                  let recText = `Cluck! `;
-                  if (contextLines) recText += `\n${contextLines}\n\n`;
+                  let recText = '';
+                  if (contextLines) recText += `${contextLines}\n\n`;
 
                   if (recs.length === 0) {
-                      recText += `Hmm, I couldn't find recipes that match your allergies for your remaining calories. You may need to track manually or check the Search tab for options!`;
+                      recText += t('chat.recNoMatch');
                   } else {
-                      if (remainingMealsToEat > 1) {
-                          recText += `You still have ${remainingMealsToEat} meals left. For your next meal (**~${Math.round(caloriesPerRemainingMeal)} kcal**), try these: 🐔\n\n`;
-                      } else {
-                          recText += `To exactly hit your remaining **${Math.round(remCals)} kcal**, here are some scaled recipes: 🐔\n\n`;
-                      }
+                      recText += remainingMealsToEat > 1
+                        ? `${t('chat.recNextMeal', { count: remainingMealsToEat, kcal: Math.round(caloriesPerRemainingMeal) })}\n\n`
+                        : `${t('chat.recExact', { kcal: Math.round(remCals) })}\n\n`;
                       recs.forEach((r: any) => {
-                         recText += `🍽️ **${r.name}**\nTotal Portion: ${Math.round(r.macros_per_portion.portion_g)}g\n${Math.round(r.macros_per_portion.calories)} kcal | ${Math.round(r.macros_per_portion.protein)}g protein\n\nIngredients:\n`;
+                         recText += `🍽️ **${r.name}**\n${t('chat.recTotalPortion', { grams: Math.round(r.macros_per_portion.portion_g) })}\n${Math.round(r.macros_per_portion.calories)} ${t('macro.kcal')} | ${Math.round(r.macros_per_portion.protein)}g ${t('macro.protein')}\n\n${t('chat.recIngredients')}\n`;
                          if (r.ingredients && r.ingredients.length > 0) {
                              r.ingredients.forEach((ing: any) => {
                                  recText += `- ${Math.round(ing.qty_g)}g ${ing.name}\n`;
@@ -526,32 +604,32 @@ export default function ChatScreen() {
                          recText += `\n`;
                       });
                       if (userAllergies.length > 0) {
-                          recText += `\n✅ All suggestions above are free of your allergens (${userAllergies.join(', ')}).`;
+                          recText += `\n${t('chat.recAllergenFree', { allergens: allergenLabels })}`;
                       }
                   }
                   coachResponseText = recText.trim();
                   nextMascot = 'streak';
-                  nextStatus = 'Giving exact tips!';
+                  nextStatus = 'chat.statusTips';
               } catch(e) {
-                  coachResponseText = `Cluck... I couldn't fetch recommendations right now!`;
+                  coachResponseText = t('chat.recFailed');
               }
           }
       } else if (parsed.type === 'allergy_query') {
         const allergiesStr = user?.allergies?.length
-          ? user.allergies.map((a: string) => `• ${a.charAt(0).toUpperCase() + a.slice(1)}`).join('\n')
-          : 'None';
+          ? user.allergies.map((a: string) => `• ${labelForOptionKey(lang, a)}`).join('\n')
+          : t('common.none');
         const condition = !user?.health_condition || user?.health_condition === 'none'
-          ? 'None'
-          : user?.health_condition === 'others'
-            ? (user?.health_condition_custom || 'Other condition')
-            : user?.health_condition.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        coachResponseText = `Cluck! Here is your health summary, ${user?.full_name?.split(' ')[0] ?? 'friend'}! 🐔🏥\n\n🏥 **Health Condition**: ${condition}\n\n🚫 **Registered Allergies**:\n${allergiesStr}\n\nCoach Hoo always filters your allergens out of meal recommendations! If you want to update these, please reset your profile and go through onboarding again.`;
+          ? t('common.none')
+          : user?.health_condition === 'others' || user?.health_condition === 'other'
+            ? (user?.health_condition_custom || t('profile.otherCondition'))
+            : labelForOptionKey(lang, user.health_condition);
+        coachResponseText = t('chat.allergyReply', { name: firstName, condition, allergies: allergiesStr });
         nextMascot = isLate ? 'sleeppp' : 'idle';
-        nextStatus = 'Health check!';
+        nextStatus = 'chat.statusHealth';
       } else if (parsed.type === 'general_chat') {
-        coachResponseText = `Cluck cluck! Coach Hoo is here! 🐔\n\n💡 **Hoo\'s Fitness Tips**:\n1. Hit your protein targets (aim for 2.0g per kg of body weight).\n2. If you weigh food with bones, type "with 20g bones" to subtract bone weight!\n3. Cooked methods change macros: fried food has added fats compared to boiled.\n\nTry telling me: "Log 150g boiled chicken breast for dinner"!`;
+        coachResponseText = t('chat.generalTips');
         nextMascot = isLate ? 'sleeppp' : 'idle';
-        nextStatus = isLate ? 'Yawning...' : 'Feeling helpful!';
+        nextStatus = isLate ? 'chat.statusYawning' : 'chat.statusHelpful';
       } else if (parsed.type === 'log_multiple' && parsed.items && parsed.items.length > 0) {
         try {
           const itemsToLog = parsed.items.map((it: any) => ({
@@ -582,17 +660,25 @@ export default function ChatScreen() {
               (p.matchedItem.id === it.id) || (p.matchedItem.type === 'manual' && p.matchedItem.name === it.food_type)
             );
             
-            const foodName = originalItem?.matchedItem?.name || it.food_type || 'Food';
-            summaryText += `🍗 **${foodName}** (${it.quantity_g}g${it.bone_weight_g ? ` with ${it.bone_weight_g}g bones` : ''})\n`;
+            const foodName = originalItem?.matchedItem?.name || it.food_type || t('mealSection.item');
+            const bonesSuffix = it.bone_weight_g ? t('chat.logItemBones', { grams: it.bone_weight_g }) : '';
+            summaryText += `🍗 **${foodName}** (${it.quantity_g}g${bonesSuffix})\n`;
           }
 
-          coachResponseText = `Bawk! Successfully logged for your **${parsed.meal_type}**! 🐔🎉\n\n${summaryText}\n🔥 **Total Calories**: ${Math.round(totalCal)} kcal\n💪 **Total Protein**: ${Math.round(totalP)}g\n🌾 **Total Carbs**: ${Math.round(totalC)}g\n🥑 **Total Fat**: ${Math.round(totalF)}g\n\n${totalP > 20 ? 'Cock-a-doodle-doo! Amazing protein source! Coach Hoo is flexing! 🐔💪' : 'Logged! Keep checking your macros!'}`;
+          const totalsText = t('chat.logTotals', {
+            cal: Math.round(totalCal),
+            p: Math.round(totalP),
+            c: Math.round(totalC),
+            f: Math.round(totalF),
+          });
+          const closer = totalP > 20 ? t('chat.greatProtein') : t('chat.loggedKeepGoing');
+          coachResponseText = `${t('chat.logSuccess', { mealType: getMealTypeLabel(lang, parsed.meal_type) })}\n\n${summaryText}\n${totalsText}\n\n${closer}`;
           nextMascot = totalP > 20 ? 'flex' : (isLate ? 'sleeppp' : 'streak');
-          nextStatus = totalP > 20 ? 'Feelin the pump!' : (isLate ? 'Bedtime cluck...' : 'Log streak ongoing!');
+          nextStatus = totalP > 20 ? 'chat.statusPump' : (isLate ? 'chat.statusBedtime' : 'chat.statusStreak');
         } catch (err: any) {
-          coachResponseText = `Cluck... I failed to log those items. Error: ${err.message || 'Unknown'}. Try entering them manually in the Log Meal screen!`;
+          coachResponseText = t('chat.logFailed', { error: err.message || t('common.unknown') });
           nextMascot = 'worry';
-          nextStatus = 'Worried cluck...';
+          nextStatus = 'chat.statusWorried';
         }
       }
 
@@ -615,16 +701,16 @@ export default function ChatScreen() {
   const handleScanNutrition = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission Denied', 'Camera access is required to scan nutrition facts.');
+      Alert.alert(t('ocr.permissionDenied'), t('ocr.cameraRequiredLabel'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.5 });
     if (!result.canceled) {
       Alert.alert(
-        'Simulated OCR',
-        'In a production app with a backend server, we would run AI OCR here to extract macros from the nutrition label. For now, please input the macros manually!',
+        t('ocr.simulatedTitle'),
+        t('ocr.simulatedLabelBody'),
         [
-          { text: 'OK', onPress: () => {
+          { text: t('common.ok'), onPress: () => {
               setScannedName('');
               setScannedCals(''); setScannedProtein(''); setScannedCarbs(''); setScannedFat('');
               setScannedMealType('snack');
@@ -636,7 +722,7 @@ export default function ChatScreen() {
   };
 
   const handleSubmitOcr = async () => {
-    if (!scannedName) return Alert.alert('Error', 'Food name is required');
+    if (!scannedName) return Alert.alert(t('common.error'), t('ocr.nameRequired'));
     const c = parseFloat(scannedCals) || 0;
     const p = parseFloat(scannedProtein) || 0;
     const cb = parseFloat(scannedCarbs) || 0;
@@ -645,7 +731,7 @@ export default function ChatScreen() {
     setOcrModalVisible(false);
 
     // Send user message
-    const userMsg: Message = { id: Math.random().toString(), sender: 'user', text: `📸 Scanned Nutrition Facts: ${scannedName}`, timestamp: new Date() };
+    const userMsg: Message = { id: Math.random().toString(), sender: 'user', text: t('chat.scannedPrefix', { name: scannedName }), timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -664,19 +750,23 @@ export default function ChatScreen() {
         const coachMsg: Message = {
           id: Math.random().toString(),
           sender: 'coach',
-          text: `Bawk! Successfully logged your scanned item **${scannedName}** to your **${scannedMealType}**! 🐔🎉\n\n🔥 **Calories**: ${c} kcal\n💪 **Protein**: ${p}g\n🌾 **Carbs**: ${cb}g\n🥑 **Fat**: ${f}g`,
+          text: t('chat.scanLogged', {
+            name: scannedName,
+            mealType: getMealTypeLabel(lang, scannedMealType),
+            cal: c, p, c: cb, f,
+          }),
           timestamp: new Date(),
           mascotState: p > 15 ? 'flex' : 'streak',
         };
         setMessages((prev) => [...prev, coachMsg]);
         setIsTyping(false);
-        changeMascotState(p > 15 ? 'flex' : 'streak', 'Logged scan!');
+        changeMascotState(p > 15 ? 'flex' : 'streak', 'chat.statusScan');
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       }, 1500);
 
     } catch (err: any) {
       setIsTyping(false);
-      Alert.alert('Error', 'Failed to log scanned meal');
+      Alert.alert(t('common.error'), t('ocr.failedLog'));
     }
   };
 
@@ -700,7 +790,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Mascot Header View */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <Animated.View style={[styles.mascotFrame, { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { scale: breathAnim }] }]}>
           <Image
             source={MASCOT_IMAGES[mascotState]}
@@ -712,7 +802,7 @@ export default function ChatScreen() {
           <Text style={styles.coachTitle}>Coach Hoo 🐔</Text>
           <View style={styles.statusBubble}>
             <View style={[styles.statusDot, { backgroundColor: mascotState === 'worry' ? Colors.error : mascotState === 'sleeppp' ? Colors.textMuted : Colors.success }]} />
-            <Text style={styles.statusText}>{mascotStatusText}</Text>
+            <Text style={styles.statusText}>{t(mascotStatusKey)}</Text>
           </View>
         </View>
       </View>
@@ -729,7 +819,7 @@ export default function ChatScreen() {
           isTyping ? (
             <View style={styles.typingBubble}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.typingText}>Coach Hoo is writing...</Text>
+                <Text style={styles.typingText}>{t('chat.writing')}</Text>
               </View>
           ) : null
         }
@@ -738,15 +828,18 @@ export default function ChatScreen() {
       {/* Suggestions scroll */}
       <View style={styles.suggestionsWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
-          {QUICK_SUGGESTIONS.map((s) => (
-            <Pressable
-              key={s}
-              style={styles.suggestionChip}
-              onPress={() => setInputText(s)}
-            >
-              <Text style={styles.suggestionText}>{s}</Text>
-            </Pressable>
-          ))}
+          {QUICK_SUGGESTION_KEYS.map((key) => {
+            const label = t(key);
+            return (
+              <Pressable
+                key={key}
+                style={styles.suggestionChip}
+                onPress={() => setInputText(label)}
+              >
+                <Text style={styles.suggestionText}>{label}</Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -757,7 +850,7 @@ export default function ChatScreen() {
         </Pressable>
         <TextInput
           style={styles.input}
-          placeholder="Chat or type what you ate to log..."
+          placeholder={t('chat.inputPlaceholder')}
           placeholderTextColor={Colors.textMuted}
           value={inputText}
           onChangeText={setInputText}
@@ -777,38 +870,38 @@ export default function ChatScreen() {
       <Modal visible={ocrModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Scanned Nutrition Facts</Text>
+            <Text style={styles.modalTitle}>{t('ocr.addScanned')}</Text>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.inputLabel}>Food Name</Text>
-              <TextInput style={styles.modalInput} placeholder="e.g. Protein Bar" placeholderTextColor={Colors.textMuted} value={scannedName} onChangeText={setScannedName} />
+              <Text style={styles.inputLabel}>{t('ocr.foodName')}</Text>
+              <TextInput style={styles.modalInput} placeholder={t('ph.exampleName')} placeholderTextColor={Colors.textMuted} value={scannedName} onChangeText={setScannedName} />
 
-              <Text style={styles.inputLabel}>Meal Type</Text>
+              <Text style={styles.inputLabel}>{t('ocr.mealType')}</Text>
               <View style={styles.mealTypeChips}>
-                {['breakfast', 'lunch', 'dinner', 'snack'].map(type => (
-                  <Pressable key={type} style={[styles.mealTypeChip, scannedMealType === type && styles.mealTypeChipActive]} onPress={() => setScannedMealType(type)}>
-                    <Text style={[styles.mealTypeChipText, scannedMealType === type && styles.mealTypeChipTextActive]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                {MEAL_TYPES.map((mt) => (
+                  <Pressable key={mt.key} style={[styles.mealTypeChip, scannedMealType === mt.key && styles.mealTypeChipActive]} onPress={() => setScannedMealType(mt.key)}>
+                    <Text style={[styles.mealTypeChipText, scannedMealType === mt.key && styles.mealTypeChipTextActive]}>{getMealTypeLabel(lang, mt.key)}</Text>
                   </Pressable>
                 ))}
               </View>
 
-              <Text style={styles.inputLabel}>Calories</Text>
+              <Text style={styles.inputLabel}>{t('macro.calories')}</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCals} onChangeText={setScannedCals} />
 
-              <Text style={styles.inputLabel}>Protein (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.proteinG')}</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedProtein} onChangeText={setScannedProtein} />
 
-              <Text style={styles.inputLabel}>Carbs (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.carbsG')}</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCarbs} onChangeText={setScannedCarbs} />
 
-              <Text style={styles.inputLabel}>Fat (g)</Text>
+              <Text style={styles.inputLabel}>{t('macro.fatG')}</Text>
               <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedFat} onChangeText={setScannedFat} />
 
               <View style={styles.modalBtnRow}>
                 <Pressable style={styles.modalCancelBtn} onPress={() => setOcrModalVisible(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                 </Pressable>
                 <Pressable style={styles.modalSaveBtn} onPress={handleSubmitOcr}>
-                  <Text style={styles.modalSaveText}>Log to Meal</Text>
+                  <Text style={styles.modalSaveText}>{t('ocr.logToMeal')}</Text>
                 </Pressable>
               </View>
             </ScrollView>
@@ -826,7 +919,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,

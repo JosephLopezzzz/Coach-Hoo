@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import type { SelectItem, SelectGroup } from '../services/coachMessageService';
+import { useLanguage } from '../context/LanguageContext';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 
 interface SearchableSelectListProps {
@@ -46,6 +47,7 @@ export default function SearchableSelectList({
   searchPlaceholder,
   safetyMessage,
 }: SearchableSelectListProps) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
 
   const allItems = useMemo(() => {
@@ -104,7 +106,7 @@ export default function SearchableSelectList({
                 key={item.key}
                 style={[styles.row, sel && styles.rowActive]}
                 onPress={() => onSelectionChange(toggleKey(selectedKeys, item.key, noneKey, preferNotKey))}
-                accessibilityLabel={`${item.label}${sel ? ', selected' : ', not selected'}`}
+                accessibilityLabel={`${item.label}, ${sel ? t('common.selected') : t('common.notSelected')}`}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: sel }}
               >
@@ -120,7 +122,7 @@ export default function SearchableSelectList({
 
       {metaMatches && (
         <View style={styles.group}>
-          <Text style={styles.categoryLabel}>Options</Text>
+          <Text style={styles.categoryLabel}>{t('common.options')}</Text>
           {metaOptions.map((opt) => {
             const sel = selectedKeys.includes(opt.key);
             return (
@@ -128,7 +130,7 @@ export default function SearchableSelectList({
                 key={opt.key}
                 style={[styles.row, sel && styles.rowActive]}
                 onPress={() => onSelectionChange(toggleKey(selectedKeys, opt.key, noneKey, preferNotKey))}
-                accessibilityLabel={`${opt.label}${sel ? ', selected' : ', not selected'}`}
+                accessibilityLabel={`${opt.label}, ${sel ? t('common.selected') : t('common.notSelected')}`}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: sel }}
               >
@@ -145,11 +147,11 @@ export default function SearchableSelectList({
       {selectedKeys.includes(otherKey) && (
         <TextInput
           style={styles.otherInput}
-          placeholder="Please specify"
+          placeholder={t('common.pleaseSpecify')}
           placeholderTextColor={Colors.textMuted}
           value={otherValue}
           onChangeText={onOtherChange}
-          accessibilityLabel="Other, please specify"
+          accessibilityLabel={`${t('common.other')}, ${t('common.pleaseSpecify')}`}
         />
       )}
 

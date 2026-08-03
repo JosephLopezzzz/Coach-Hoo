@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useAuth } from '../context/AuthContext';
@@ -44,10 +45,6 @@ import {
   getContinueLabel,
   getGoToDashboardLabel,
   getConfirmLabel,
-  HEALTH_CONDITION_GROUPS,
-  HEALTH_META_OPTIONS,
-  ALLERGEN_GROUPS,
-  ALLERGY_META_OPTIONS,
   ONBOARDING_PROGRESS_KEY,
   LANGUAGE_KEY,
   convertHeight,
@@ -56,6 +53,11 @@ import {
   validateHeight,
   validateWeight,
 } from '../services/coachMessageService';
+import {
+  getHealthConditionGroups,
+  getAllergenGroups,
+  getMetaOptions,
+} from '../constants/i18n';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 
 const STEPS = [
@@ -106,12 +108,17 @@ const emptyForm: FormData = {
 
 export default function CoachOnboarding() {
   const { completeOnboarding } = useAuth();
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [typingDone, setTypingDone] = useState(true);
   const [saving, setSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const healthGroups = useMemo(() => getHealthConditionGroups(lang), [lang]);
+  const allergenGroups = useMemo(() => getAllergenGroups(lang), [lang]);
+  const metaOptions = useMemo(() => getMetaOptions(lang), [lang]);
 
   useEffect(() => {
     (async () => {
@@ -174,13 +181,13 @@ export default function CoachOnboarding() {
   const validateCurrent = (): boolean => {
     const s = STEPS[step];
     if (s === 'welcome' && !form.name.trim()) {
-      Alert.alert('', lang === 'filipino' ? 'Pakilagay ang iyong pangalan.' : 'Please enter your name.');
+      Alert.alert('', t('validation.name'));
       return false;
     }
     if (s === 'age') {
       const age = parseInt(form.age, 10);
       if (!form.age || !validateAge(age)) {
-        Alert.alert('', lang === 'filipino' ? 'Pakilagay ang wastong edad (10–120).' : 'Please enter a valid age (10–120).');
+        Alert.alert('', t('validation.age'));
         return false;
       }
     }
@@ -188,11 +195,11 @@ export default function CoachOnboarding() {
       const h = parseFloat(form.heightValue);
       const w = parseFloat(form.weightValue);
       if (!form.heightValue || !validateHeight(convertHeight(h, form.heightUnit))) {
-        Alert.alert('', lang === 'filipino' ? 'Pakilagay ang wastong taas.' : 'Please enter a valid height.');
+        Alert.alert('', t('validation.height'));
         return false;
       }
       if (!form.weightValue || !validateWeight(convertWeight(w, form.weightUnit))) {
-        Alert.alert('', lang === 'filipino' ? 'Pakilagay ang wastong timbang.' : 'Please enter a valid weight.');
+        Alert.alert('', t('validation.weight'));
         return false;
       }
     }
@@ -266,11 +273,11 @@ export default function CoachOnboarding() {
 
   const handleExitSetup = () => {
     Alert.alert(
-      lang === 'filipino' ? 'Lumabas sa setup?' : 'Exit setup?',
-      lang === 'filipino' ? 'Ang iyong progreso ay mai-save. Maaari kang magpatuloy mamaya.' : 'Your progress will be saved. You can continue later.',
+      t('onboarding.exitTitle'),
+      t('onboarding.exitBody'),
       [
-        { text: lang === 'filipino' ? 'Kanselahin' : 'Cancel', style: 'cancel' },
-        { text: lang === 'filipino' ? 'Lumabas' : 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.exit'), style: 'destructive', onPress: () => BackHandler.exitApp() },
       ],
     );
   };
@@ -285,14 +292,14 @@ export default function CoachOnboarding() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + Spacing.sm }]}>
         {isFirstStep ? (
-          <Pressable onPress={handleExitSetup} style={styles.backBtn} accessibilityLabel={lang === 'filipino' ? 'Lumabas sa setup' : 'Exit setup'}>
-            <Text style={styles.backText}>{lang === 'filipino' ? 'Lumabas' : 'Exit'}</Text>
+          <Pressable onPress={handleExitSetup} style={styles.backBtn} accessibilityLabel={t('onboarding.exitSetup')}>
+            <Text style={styles.backText}>{t('common.exit')}</Text>
           </Pressable>
         ) : showBack ? (
-          <Pressable onPress={() => goToStep(step - 1)} style={styles.backBtn} accessibilityLabel={lang === 'filipino' ? 'Bumalik' : 'Back'}>
-            <Text style={styles.backText}>{'← Back'}</Text>
+          <Pressable onPress={() => goToStep(step - 1)} style={styles.backBtn} accessibilityLabel={t('common.back')}>
+            <Text style={styles.backText}>{`← ${t('common.back')}`}</Text>
           </Pressable>
         ) : (
           <View style={styles.backBtn} />
@@ -316,9 +323,7 @@ export default function CoachOnboarding() {
           {/* ── Language selection ── */}
           {currentStep === 'language' && (
             <View style={styles.langScreen}>
-              <Text style={styles.langTitle}>
-                {lang === 'filipino' ? 'Pumili ng wika' : 'Select your language'}
-              </Text>
+              <Text style={styles.langTitle}>{t('onboarding.selectLanguage')}</Text>
               <Pressable
                 style={[styles.langCard, lang === 'english' && styles.langCardActive]}
                 onPress={async () => {
@@ -365,7 +370,7 @@ export default function CoachOnboarding() {
           {/* ── Age ── */}
           {currentStep === 'age' && (
             <StepContent
-              coachMessage={getAgeMessage(lang, form.name || 'there')}
+              coachMessage={getAgeMessage(lang, form.name || t('coach.friend'))}
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="age"
@@ -396,9 +401,7 @@ export default function CoachOnboarding() {
             >
               <View style={styles.dualRow}>
                 <View style={styles.dualField}>
-                  <Text style={styles.fieldLabel}>
-                    {lang === 'filipino' ? 'Taas' : 'Height'}
-                  </Text>
+                  <Text style={styles.fieldLabel}>{t('onboarding.height')}</Text>
                   <View style={styles.inputWithUnit}>
                     <TextInput
                       style={[styles.input, styles.inputFlex]}
@@ -416,9 +419,7 @@ export default function CoachOnboarding() {
                   </View>
                 </View>
                 <View style={styles.dualField}>
-                  <Text style={styles.fieldLabel}>
-                    {lang === 'filipino' ? 'Timbang' : 'Weight'}
-                  </Text>
+                  <Text style={styles.fieldLabel}>{t('onboarding.weight')}</Text>
                   <View style={styles.inputWithUnit}>
                     <TextInput
                       style={[styles.input, styles.inputFlex]}
@@ -445,7 +446,7 @@ export default function CoachOnboarding() {
           {/* ── Feedback ── */}
           {currentStep === 'feedback' && (
             <StepContent
-              coachMessage={getFeedbackMessage(lang, form.name || 'there')}
+              coachMessage={getFeedbackMessage(lang, form.name || t('coach.friend'))}
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="feedback"
@@ -536,8 +537,8 @@ export default function CoachOnboarding() {
               {form.healthAnswer === 'yes' && typingDone && (
                 <>
                   <SearchableSelectList
-                    groups={HEALTH_CONDITION_GROUPS}
-                    metaOptions={HEALTH_META_OPTIONS}
+                    groups={healthGroups}
+                    metaOptions={metaOptions}
                     selectedKeys={form.healthConditions}
                     onSelectionChange={(keys) => updateForm({ healthConditions: keys })}
                     otherKey="other"
@@ -545,7 +546,7 @@ export default function CoachOnboarding() {
                     onOtherChange={(text) => updateForm({ healthConditionOther: text })}
                     noneKey="none"
                     preferNotKey="prefer_not_say"
-                    searchPlaceholder={lang === 'filipino' ? 'Maghanap ng kondisyon...' : 'Search conditions...'}
+                    searchPlaceholder={t('onboarding.searchConditions')}
                     safetyMessage={getHealthConditionSafetyNotice(lang)}
                   />
                   {form.healthConditions.length > 0 && (
@@ -611,8 +612,8 @@ export default function CoachOnboarding() {
               {form.allergiesAnswer === 'yes' && typingDone && (
                 <>
                   <SearchableSelectList
-                    groups={ALLERGEN_GROUPS}
-                    metaOptions={ALLERGY_META_OPTIONS}
+                    groups={allergenGroups}
+                    metaOptions={metaOptions}
                     selectedKeys={form.allergies}
                     onSelectionChange={(keys) => updateForm({ allergies: keys })}
                     otherKey="other"
@@ -620,25 +621,21 @@ export default function CoachOnboarding() {
                     onOtherChange={(text) => updateForm({ allergyOther: text })}
                     noneKey="none"
                     preferNotKey="prefer_not_say"
-                    searchPlaceholder={lang === 'filipino' ? 'Maghanap ng allergen...' : 'Search allergens...'}
+                    searchPlaceholder={t('onboarding.searchAllergens')}
                     safetyMessage={getAllergySafetyNotice(lang)}
                   />
                   <View style={styles.sectionSpacer} />
-                  <Text style={styles.sectionTitle}>
-                    {lang === 'filipino' ? 'Pagkain intolerance o sensitibo' : 'Food intolerances or sensitivities'}
-                  </Text>
-                  <Text style={styles.sectionHint}>
-                    {lang === 'filipino' ? 'Hal: lactose intolerance, gluten sensitivity, maanghang na pagkain, caffeine sensitivity' : 'Examples: lactose intolerance, gluten sensitivity, spicy foods, caffeine sensitivity'}
-                  </Text>
+                  <Text style={styles.sectionTitle}>{t('onboarding.intolerancesTitle')}</Text>
+                  <Text style={styles.sectionHint}>{t('onboarding.intolerancesHint')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={lang === 'filipino' ? 'Ilagay ang iyong mga intolerance...' : 'Describe your intolerances...'}
+                    placeholder={t('onboarding.intolerancesPlaceholder')}
                     placeholderTextColor={Colors.textMuted}
                     value={form.intolerances}
                     onChangeText={(v) => updateForm({ intolerances: v })}
                     multiline
                     numberOfLines={2}
-                    accessibilityLabel={lang === 'filipino' ? 'Pagkain intolerance o sensitibo' : 'Food intolerances or sensitivities'}
+                    accessibilityLabel={t('onboarding.intolerancesTitle')}
                   />
                   {form.allergies.length > 0 && (
                     <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)} accessibilityLabel={getConfirmLabel(lang)}>
@@ -660,7 +657,7 @@ export default function CoachOnboarding() {
           {/* ── Finish ── */}
           {currentStep === 'finish' && (
             <StepContent
-              coachMessage={getFinishMessage(lang, form.name || 'there')}
+              coachMessage={getFinishMessage(lang, form.name || t('coach.friend'))}
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="finish"
@@ -744,7 +741,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 56,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.sm,
   },

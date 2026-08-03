@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
 import type { Food, Recipe, RestaurantFood } from '../types';
 
 type FoodCardItem =
@@ -28,6 +29,7 @@ function MacroPill({ value, label, color }: { value: number; label: string; colo
 }
 
 export default function FoodCard({ item, onPress, onAdd, compact = false }: FoodCardProps) {
+  const { t } = useLanguage();
   let name = '';
   let calories = 0;
   let protein  = 0;
@@ -43,7 +45,7 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
     protein  = f.protein_per_100g;
     carbs    = f.carbs_per_100g;
     fat      = f.fat_per_100g;
-    badge    = f.is_raw ? 'per 100g raw' : 'per 100g';
+    badge    = f.is_raw ? t('card.per100gRaw') : t('card.per100g');
     badgeColor = Colors.textMuted;
   } else if (item.source === 'recipe') {
     const r = item.data as any;
@@ -55,8 +57,8 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
     carbs    = macros.carbs ?? 0;
     fat      = macros.fat ?? 0;
     badge    = isPortioned
-      ? `🇵🇭 ${r.country} · ${Math.round(r.macros_per_portion.portion_g)}g portion`
-      : `🇵🇭 ${r.country} · per 100g`;
+      ? t('card.recipePortion', { country: r.country, grams: Math.round(r.macros_per_portion.portion_g) })
+      : t('card.recipePer100g', { country: r.country });
     badgeColor = Colors.accent;
   } else {
     const rf = item.data as RestaurantFood;
@@ -81,7 +83,7 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
             <Text style={[styles.badgeText, { color: badgeColor }]}>{badge}</Text>
           </View>
         </View>
-        <Text style={styles.calories}>{Math.round(calories)} <Text style={styles.kcal}>kcal</Text></Text>
+        <Text style={styles.calories}>{Math.round(calories)} <Text style={styles.kcal}>{t('macro.kcal')}</Text></Text>
       </View>
 
       {!compact && (

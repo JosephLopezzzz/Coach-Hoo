@@ -6,9 +6,11 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { useMeals } from '../../context/MealContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import MealSection from '../../components/MealSection';
 import CoachGuide from '../../components/CoachGuide';
 import DashboardTutorial, {
@@ -87,6 +89,8 @@ function CalorieRing({
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const { lang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { meals, totals, targets, remaining, isLoading, loadToday, deleteMeal } = useMeals();
   const [showTutorial, setShowTutorial] = useState(false);
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
@@ -102,6 +106,7 @@ export default function DashboardScreen() {
     meals,
     totals,
     targets,
+    lang,
   );
 
   const coachCardAnim = useRef(new Animated.Value(0)).current;
@@ -116,14 +121,17 @@ export default function DashboardScreen() {
     }).start();
   }, []);
 
-  // Confirmation on meal save
+  // Confirmation on meal save. The timer is cleared on unmount (and before a
+  // replacement is scheduled) so a fast second log can't leave a stale setState.
   useEffect(() => {
-    if (meals.length > prevMealCount.current && prevMealCount.current > 0) {
-      setConfirmationMsg('Logged! Keep up the great tracking!');
-      setTimeout(() => setConfirmationMsg(null), CONFIRMATION_DURATION);
-    }
+    const grew = meals.length > prevMealCount.current && prevMealCount.current > 0;
     prevMealCount.current = meals.length;
-  }, [meals.length]);
+    if (!grew) return;
+
+    setConfirmationMsg(t('dash.logged'));
+    const timer = setTimeout(() => setConfirmationMsg(null), CONFIRMATION_DURATION);
+    return () => clearTimeout(timer);
+  }, [meals.length, t]);
 
   // Tutorial check
   useEffect(() => {
@@ -142,7 +150,7 @@ export default function DashboardScreen() {
   const carbsTarget = targets?.carbs_target ?? 200;
   const fatTarget = targets?.fat_target ?? 65;
 
-  const today = new Date().toLocaleDateString('en-PH', {
+  const today = new Date().toLocaleDateString(lang === 'filipino' ? 'fil-PH' : 'en-PH', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -153,7 +161,7 @@ export default function DashboardScreen() {
         <ScrollView
           ref={scrollRef}
           style={styles.root}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.md }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -216,7 +224,7 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.slimLabel}>
-              Protein{' '}
+              {t('macro.protein')}{' '}
               <Text style={styles.slimVal}>
                 {Math.round(totals.protein)}/{proteinTarget}g
               </Text>
@@ -235,7 +243,7 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.slimLabel}>
-              Carbs{' '}
+              {t('macro.carbs')}{' '}
               <Text style={styles.slimVal}>
                 {Math.round(totals.carbs)}/{carbsTarget}g
               </Text>
@@ -254,7 +262,7 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.slimLabel}>
-              Fat{' '}
+              {t('macro.fat')}{' '}
               <Text style={styles.slimVal}>
                 {Math.round(totals.fat)}/{fatTarget}g
               </Text>
@@ -266,13 +274,13 @@ export default function DashboardScreen() {
         {/* Today's meals */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Meals</Text>
+            <Text style={styles.sectionTitle}>{t('dash.todaysMeals')}</Text>
             <Pressable
               onPress={() => router.push('/(tabs)/log')}
               style={styles.addMealBtn}
             >
               <Ionicons name="add" size={16} color={Colors.primary} />
-              <Text style={styles.addMealText}>Add</Text>
+              <Text style={styles.addMealText}>{t('dash.add')}</Text>
             </Pressable>
           </View>
 
@@ -286,15 +294,12 @@ export default function DashboardScreen() {
               />
               <Text style={styles.emptyTitle}>
                 {new Date().getHours() < 12
-                  ? 'Good morning!'
+                  ? t('dash.goodMorning')
                   : new Date().getHours() < 18
-                    ? 'Good afternoon!'
-                    : 'Good evening!'}
+                    ? t('dash.goodAfternoon')
+                    : t('dash.goodEvening')}
               </Text>
-              <Text style={styles.emptySubText}>
-                Coach Hoo hasn't seen any meals yet today. Time to log your first
-                one!
-              </Text>
+              <Text style={styles.emptySubText}>{t('dash.emptyMeals')}</Text>
               <Pressable
                 style={styles.emptyCta}
                 onPress={() => router.push('/(tabs)/log')}
@@ -304,7 +309,7 @@ export default function DashboardScreen() {
                   size={18}
                   color={Colors.textInverse}
                 />
-                <Text style={styles.emptyCtaText}>Log a Meal</Text>
+                <Text style={styles.emptyCtaText}>{t('dash.logAMeal')}</Text>
               </Pressable>
             </View>
           ) : (
@@ -329,7 +334,7 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
-  content: { padding: Spacing.lg, paddingTop: 56, gap: Spacing.md },
+  content: { padding: Spacing.lg, gap: Spacing.md },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

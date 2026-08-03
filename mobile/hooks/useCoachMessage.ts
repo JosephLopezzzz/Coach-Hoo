@@ -1,4 +1,7 @@
 import type { Meal, MacroResult, DailyTargets } from '../types';
+import type { Language } from '../services/coachMessageService';
+import { t } from '../constants/i18n';
+import type { StringKey } from '../constants/i18n';
 
 export type CoachMessageType =
   | 'welcome'
@@ -14,11 +17,11 @@ export interface CoachMessageResult {
   messageType: CoachMessageType;
 }
 
-function getTimeOfDay(): string {
+function getGreetingKey(): StringKey {
   const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
+  if (h < 12) return 'coach.greeting.morning';
+  if (h < 17) return 'coach.greeting.afternoon';
+  return 'coach.greeting.evening';
 }
 
 export function useCoachMessage(
@@ -26,17 +29,17 @@ export function useCoachMessage(
   meals: Meal[],
   totals: MacroResult,
   targets: DailyTargets | null,
+  lang: Language = 'english',
 ): CoachMessageResult {
-  const name = userName?.split(' ')[0] ?? 'there';
+  const name = userName?.split(' ')[0] || t(lang, 'coach.friend');
   const hour = new Date().getHours();
   const isLate = hour >= 22 || hour < 5;
-  const timeOfDay = getTimeOfDay();
-  const greeting = `Good ${timeOfDay}, ${name}!`;
+  const greeting = t(lang, getGreetingKey(), { name });
 
   if (isLate) {
     return {
       greeting,
-      message: "It's getting late! Great work today. Time to rest and recover.",
+      message: t(lang, 'coach.lateNight'),
       messageType: 'late-night',
     };
   }
@@ -44,8 +47,7 @@ export function useCoachMessage(
   if (!meals || meals.length === 0) {
     return {
       greeting,
-      message:
-        "Welcome to Coach Hoo! Tap the + to log your first meal — I'll help track your progress!",
+      message: t(lang, 'coach.welcome'),
       messageType: 'welcome',
     };
   }
@@ -63,7 +65,7 @@ export function useCoachMessage(
     if (calPct >= 1) {
       return {
         greeting,
-        message: 'Nailed it! All macros hit today. Coach Hoo is proud of you!',
+        message: t(lang, 'coach.celebration'),
         messageType: 'celebration',
       };
     }
@@ -71,11 +73,11 @@ export function useCoachMessage(
     if (calPct >= 0.75) {
       const remainder =
         proteinRemaining > 0
-          ? `${proteinRemaining}g protein to go`
-          : 'just a bit more to hit your goals';
+          ? t(lang, 'coach.proteinToGo', { grams: proteinRemaining })
+          : t(lang, 'coach.bitMore');
       return {
         greeting,
-        message: `Almost there! ${remainder}. You've got this!`,
+        message: t(lang, 'coach.almostThere', { remainder }),
         messageType: 'progress',
       };
     }
@@ -83,7 +85,11 @@ export function useCoachMessage(
     if (calPct >= 0.5) {
       return {
         greeting,
-        message: `Good progress! ${mealCount} meal${mealCount > 1 ? 's' : ''} logged. Keep it going!`,
+        message: t(
+          lang,
+          mealCount > 1 ? 'coach.goodProgressPlural' : 'coach.goodProgress',
+          { count: mealCount },
+        ),
         messageType: 'encouragement',
       };
     }
@@ -91,21 +97,21 @@ export function useCoachMessage(
     if (mealCount >= 2) {
       return {
         greeting,
-        message: `Great start! You've logged ${mealCount} meals. Try for a balanced dinner to round things out.`,
+        message: t(lang, 'coach.greatStart', { count: mealCount }),
         messageType: 'encouragement',
       };
     }
 
     return {
       greeting,
-      message: "You're off to a good start! What's next on your menu today?",
+      message: t(lang, 'coach.offToGoodStart'),
       messageType: 'encouragement',
     };
   }
 
   return {
     greeting,
-    message: 'Start logging your meals to see your progress!',
+    message: t(lang, 'coach.startLogging'),
     messageType: 'welcome',
   };
 }

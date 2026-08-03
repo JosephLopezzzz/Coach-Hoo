@@ -5,14 +5,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { getActivityLabel, labelForOptionKey } from '../../constants/i18n';
+import type { Language } from '../../services/coachMessageService';
+import type { StringKey } from '../../constants/strings';
 import { resetTutorial } from '../../components/DashboardTutorial';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
 
-const ACTIVITY_LABELS: Record<number, string> = {
-  1: 'Sedentary', 2: 'Lightly Active', 3: 'Moderately Active',
-  4: 'Very Active', 5: 'Super Active',
-};
+const LANGUAGE_OPTIONS: { key: Language; labelKey: StringKey; flag: string }[] = [
+  { key: 'english',  labelKey: 'lang.english',  flag: '🇬🇧' },
+  { key: 'filipino', labelKey: 'lang.filipino', flag: '🇵🇭' },
+];
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
@@ -23,11 +28,11 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MacroTarget({ label, value, color }: { label: string; value: number; color: string }) {
+function MacroTarget({ label, unit, value, color }: { label: string; unit: string; value: number; color: string }) {
   return (
     <View style={[styles.macroTarget, { borderColor: `${color}30` }]}>
       <Text style={[styles.macroValue, { color }]}>{Math.round(value)}</Text>
-      <Text style={styles.macroUnit}>{label === 'Calories' ? 'kcal' : 'g'}</Text>
+      <Text style={styles.macroUnit}>{unit}</Text>
       <Text style={styles.macroLabel}>{label}</Text>
     </View>
   );
@@ -35,13 +40,15 @@ function MacroTarget({ label, value, color }: { label: string; value: number; co
 
 export default function ProfileScreen() {
   const { user, resetUser, updateUser } = useAuth();
+  const { lang, setLang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [resetting, setResetting] = useState(false);
 
   const handleReset = () => {
-    Alert.alert('Reset Progress', 'This will delete all your data and progress. Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.resetTitle'), t('profile.resetBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Reset Everything',
+        text: t('profile.resetConfirm'),
         style: 'destructive',
         onPress: async () => {
           setResetting(true);
@@ -56,7 +63,7 @@ export default function ProfileScreen() {
       try {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-          Alert.alert('Permission Denied', 'Coach Hoo needs access to your photos to change your profile picture.');
+          Alert.alert(t('ocr.permissionDenied'), t('profile.photoPermission'));
           return;
         }
 
@@ -72,15 +79,15 @@ export default function ProfileScreen() {
         }
       } catch (e) {
         console.error('Failed to pick image:', e);
-        Alert.alert('Error', 'Failed to pick image from library.');
+        Alert.alert(t('common.error'), t('profile.photoFailed'));
       }
     };
 
     if (user?.avatar_uri) {
-      Alert.alert('Profile Picture', 'What would you like to do?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove Photo', style: 'destructive', onPress: async () => await updateUser({ avatar_uri: undefined }) },
-        { text: 'Choose New Photo', onPress: launchPicker },
+      Alert.alert(t('profile.picture'), t('profile.pictureAction'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('profile.removePhoto'), style: 'destructive', onPress: async () => await updateUser({ avatar_uri: undefined }) },
+        { text: t('profile.choosePhoto'), onPress: launchPicker },
       ]);
     } else {
       launchPicker();
@@ -90,7 +97,11 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.md }]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Avatar / header */}
       <View style={styles.avatarSection}>
         <Pressable style={styles.avatarWrapper} onPress={handlePickImage}>
@@ -115,10 +126,14 @@ export default function ProfileScreen() {
             <Ionicons name="camera" size={15} color="#fff" />
           </View>
         </Pressable>
-        <Text style={styles.userName}>{user.full_name ?? 'Pip Health User'}</Text>
+        <Text style={styles.userName}>{user.full_name ?? t('profile.defaultName')}</Text>
         <View style={[styles.goalBadge, { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary }]}>
           <Text style={styles.goalBadgeText}>
-            {user.goal === 'lose' ? '🔥 Lose Weight' : user.goal === 'gain' ? '💪 Gain Muscle' : '⚖️ Maintain'}
+            {user.goal === 'lose'
+              ? t('profile.goalLose')
+              : user.goal === 'gain'
+                ? t('profile.goalGain')
+                : t('profile.goalMaintain')}
           </Text>
         </View>
       </View>
@@ -126,56 +141,56 @@ export default function ProfileScreen() {
       {/* Daily targets */}
       {user.calories_target && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Daily Targets</Text>
+          <Text style={styles.cardTitle}>{t('profile.dailyTargets')}</Text>
           <View style={styles.macroTargetsRow}>
-            <MacroTarget label="Calories" value={user.calories_target} color={Colors.calories} />
-            <MacroTarget label="Protein"  value={user.protein_target ?? 0}  color={Colors.protein} />
-            <MacroTarget label="Carbs"    value={user.carbs_target   ?? 0}  color={Colors.carbs} />
-            <MacroTarget label="Fat"      value={user.fat_target     ?? 0}  color={Colors.fat} />
+            <MacroTarget label={t('macro.calories')} unit={t('macro.kcal')}  value={user.calories_target}     color={Colors.calories} />
+            <MacroTarget label={t('macro.protein')}  unit={t('macro.grams')} value={user.protein_target ?? 0} color={Colors.protein} />
+            <MacroTarget label={t('macro.carbs')}    unit={t('macro.grams')} value={user.carbs_target   ?? 0} color={Colors.carbs} />
+            <MacroTarget label={t('macro.fat')}      unit={t('macro.grams')} value={user.fat_target     ?? 0} color={Colors.fat} />
           </View>
         </View>
       )}
 
       {/* Body stats */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Body Stats</Text>
-        <StatRow label="Age"      value={user.age ? `${user.age} years` : '—'} />
-        <StatRow label="Sex"      value={user.sex ? (user.sex === 'male' ? '♂ Male' : '♀ Female') : '—'} />
-        <StatRow label="Height"   value={user.height_cm ? `${user.height_cm} cm` : '—'} />
-        <StatRow label="Weight"   value={user.weight_kg ? `${user.weight_kg} kg` : '—'} />
-        <StatRow label="Activity" value={ACTIVITY_LABELS[user.activity_level ?? 2]} />
-        <StatRow label="Country"  value={user.country ?? 'Philippines'} />
+        <Text style={styles.cardTitle}>{t('profile.bodyStats')}</Text>
+        <StatRow label={t('profile.age')}      value={user.age ? t('profile.ageValue', { age: user.age }) : '—'} />
+        <StatRow label={t('profile.sex')}      value={user.sex ? (user.sex === 'male' ? `♂ ${t('profile.male')}` : `♀ ${t('profile.female')}`) : '—'} />
+        <StatRow label={t('profile.height')}   value={user.height_cm ? `${user.height_cm} cm` : '—'} />
+        <StatRow label={t('profile.weight')}   value={user.weight_kg ? `${user.weight_kg} kg` : '—'} />
+        <StatRow label={t('profile.activity')} value={getActivityLabel(lang, user.activity_level ?? 2)} />
+        <StatRow label={t('profile.country')}  value={user.country ?? 'Philippines'} />
       </View>
 
       {/* Health Info card */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Health Info</Text>
+        <Text style={styles.cardTitle}>{t('profile.healthInfo')}</Text>
 
         {/* Condition */}
         <View style={styles.healthRow}>
-          <Text style={styles.healthLabel}>Condition</Text>
+          <Text style={styles.healthLabel}>{t('profile.condition')}</Text>
           <View style={styles.conditionBadge}>
             <Ionicons name="medical-outline" size={14} color={Colors.warning} />
             <Text style={styles.conditionText}>
               {!user.health_condition || user.health_condition === 'none'
-                ? 'None'
-                : user.health_condition === 'others'
-                  ? (user.health_condition_custom || 'Other condition')
-                  : user.health_condition.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                ? t('common.none')
+                : user.health_condition === 'others' || user.health_condition === 'other'
+                  ? (user.health_condition_custom || t('profile.otherCondition'))
+                  : labelForOptionKey(lang, user.health_condition)}
             </Text>
           </View>
         </View>
 
         {/* Allergies */}
         <View style={[styles.healthRow, { alignItems: 'flex-start', marginTop: 8 }]}>
-          <Text style={styles.healthLabel}>Allergies</Text>
+          <Text style={styles.healthLabel}>{t('profile.allergies')}</Text>
           {(!user.allergies || user.allergies.length === 0) ? (
-            <Text style={styles.statValue}>None</Text>
+            <Text style={styles.statValue}>{t('common.none')}</Text>
           ) : (
             <View style={styles.allergyChipsWrap}>
               {user.allergies.map((a: string) => (
                 <View key={a} style={styles.allergyChip}>
-                  <Text style={styles.allergyChipText}>{a}</Text>
+                  <Text style={styles.allergyChipText}>{labelForOptionKey(lang, a)}</Text>
                 </View>
               ))}
             </View>
@@ -183,16 +198,47 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Language switcher */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t('profile.language')}</Text>
+        <View style={styles.langRow}>
+          {LANGUAGE_OPTIONS.map((option) => {
+            const active = lang === option.key;
+            return (
+              <Pressable
+                key={option.key}
+                style={[styles.langBtn, active && styles.langBtnActive]}
+                onPress={() => setLang(option.key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={t(option.labelKey)}
+              >
+                <Text style={styles.langFlag}>{option.flag}</Text>
+                <Text style={[styles.langBtnText, active && styles.langBtnTextActive]}>
+                  {t(option.labelKey)}
+                </Text>
+                {active && <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />}
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.langHint}>{t('profile.languageHint')}</Text>
+      </View>
+
       {/* BMI snapshot */}
       {user.height_cm && user.weight_kg && (
         <View style={styles.bmiCard}>
           {(() => {
             const bmi = user.weight_kg / ((user.height_cm / 100) ** 2);
-            const cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+            const cat = bmi < 18.5
+              ? t('profile.bmiUnderweight')
+              : bmi < 25 ? t('profile.bmiNormal')
+              : bmi < 30 ? t('profile.bmiOverweight')
+              : t('profile.bmiObese');
             const col = bmi < 18.5 ? Colors.info : bmi < 25 ? Colors.success : Colors.warning;
             return (
               <>
-                <Text style={styles.bmiLabel}>BMI</Text>
+                <Text style={styles.bmiLabel}>{t('profile.bmi')}</Text>
                 <Text style={[styles.bmiValue, { color: col }]}>{bmi.toFixed(1)}</Text>
                 <Text style={[styles.bmiCat, { color: col }]}>{cat}</Text>
               </>
@@ -206,11 +252,11 @@ export default function ProfileScreen() {
         style={styles.replayBtn}
         onPress={() => {
           resetTutorial();
-          Alert.alert('Tutorial Reset', 'The Coach Hoo tutorial will appear again on your next dashboard visit.');
+          Alert.alert(t('profile.tutorialReset'), t('profile.tutorialResetBody'));
         }}
       >
         <Ionicons name="help-circle-outline" size={20} color={Colors.primary} />
-        <Text style={styles.replayBtnText}>Replay Tutorial</Text>
+        <Text style={styles.replayBtnText}>{t('profile.replayTutorial')}</Text>
       </Pressable>
 
       {/* Reset */}
@@ -219,19 +265,19 @@ export default function ProfileScreen() {
           ? <ActivityIndicator color={Colors.error} />
           : <>
               <Ionicons name="trash-outline" size={20} color={Colors.error} />
-              <Text style={styles.logoutText}>Reset All Progress</Text>
+              <Text style={styles.logoutText}>{t('profile.resetProgress')}</Text>
             </>}
       </Pressable>
 
 
-      <Text style={styles.version}>Pip Health v1.0.0 · Built for 🇵🇭</Text>
+      <Text style={styles.version}>{t('profile.version')}</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
-  content: { padding: Spacing.lg, paddingTop: 56, gap: Spacing.md, paddingBottom: 40 },
+  content: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 40 },
   avatarSection: { alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
   avatarWrapper: {
     width: 200, height: 200,
@@ -312,4 +358,17 @@ const styles = StyleSheet.create({
   allergyChipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, flex: 1, justifyContent: 'flex-end' },
   allergyChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, backgroundColor: `${Colors.protein}15`, borderWidth: 1, borderColor: `${Colors.protein}40` },
   allergyChipText: { fontSize: FontSize.xs, color: Colors.protein, fontWeight: FontWeight.semibold, textTransform: 'capitalize' },
+
+  // Language switcher
+  langRow: { flexDirection: 'row', gap: Spacing.sm },
+  langBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 12, borderRadius: Radius.md,
+    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bgElevated,
+  },
+  langBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
+  langFlag: { fontSize: FontSize.md },
+  langBtnText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.semibold },
+  langBtnTextActive: { color: Colors.primary },
+  langHint: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: Spacing.sm },
 });
