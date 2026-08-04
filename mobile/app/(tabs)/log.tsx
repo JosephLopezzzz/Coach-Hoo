@@ -8,16 +8,16 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMeals } from '../../context/MealContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useToast } from '../../context/ToastContext';
 import { getMealTypeLabel, getCookingMethodLabel } from '../../constants/i18n';
 import ManualEntryForm from '../../components/ManualEntryForm';
-import Toast from '../../components/Toast';
-import type { ToastData } from '../../components/Toast';
 import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import type { LogItem } from '../../types';
 import { calculateApi } from '../../services/api';
 
 export default function LogMealScreen() {
   const { logMeal } = useMeals();
+  const { showToast } = useToast();
   const { lang, t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [mealType, setMealType] = useState<string>('breakfast');
@@ -25,7 +25,6 @@ export default function LogMealScreen() {
   const [preview,  setPreview]  = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [tab,      setTab]      = useState<'manual' | 'preview'>('manual');
-  const [toast,    setToast]    = useState<ToastData | null>(null);
 
   const addItem = async (item: LogItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -51,8 +50,7 @@ export default function LogMealScreen() {
 
   const handleSubmit = async () => {
     if (items.length === 0) {
-      setToast({
-        id: 'no-items',
+      showToast({
         type: 'error',
         title: t('log.noItemsTitle'),
         subtitle: t('log.noItemsBody'),
@@ -62,19 +60,12 @@ export default function LogMealScreen() {
     setLoading(true);
     try {
       await logMeal(mealType, items);
-      const mealLabel = getMealTypeLabel(lang, mealType);
-      const toastSubtitle = t(
-        items.length === 1 ? 'log.successBody' : 'log.successBodyPlural',
-        { mealType: mealLabel, count: items.length },
-      );
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setToast({ id: 'success', type: 'success', title: t('log.successTitle'), subtitle: `🎉 ${toastSubtitle}` });
       setItems([]);
       setPreview(null);
     } catch (err: any) {
       console.error('[LogMeal] Submit failed:', err.response?.data ?? err.message);
       const errorMsg = err.response?.data?.error ?? err.message ?? t('log.failedBody');
-      setToast({ id: 'error', type: 'error', title: t('log.failedTitle'), subtitle: errorMsg });
+      showToast({ type: 'error', title: t('log.failedTitle'), subtitle: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -82,7 +73,6 @@ export default function LogMealScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <Text style={styles.title}>{t('log.title')}</Text>

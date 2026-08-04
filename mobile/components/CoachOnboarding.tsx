@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import CoachBubble from './CoachBubble';
@@ -248,7 +249,6 @@ export default function CoachOnboarding() {
   };
 
   const currentStep = STEPS[step];
-  const isLast = step === STEPS.length - 1;
 
   useEffect(() => {
     const onBack = () => {
@@ -299,7 +299,8 @@ export default function CoachOnboarding() {
           </Pressable>
         ) : showBack ? (
           <Pressable onPress={() => goToStep(step - 1)} style={styles.backBtn} accessibilityLabel={t('common.back')}>
-            <Text style={styles.backText}>{`← ${t('common.back')}`}</Text>
+            <Ionicons name="chevron-back" size={20} color={Colors.textSecondary} />
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </Pressable>
         ) : (
           <View style={styles.backBtn} />
@@ -323,25 +324,45 @@ export default function CoachOnboarding() {
           {/* ── Language selection ── */}
           {currentStep === 'language' && (
             <View style={styles.langScreen}>
+              <View style={styles.langMascotStage}>
+                <Image
+                  source={require('../assets/mascot/idle.gif')}
+                  style={styles.langMascot}
+                  contentFit="contain"
+                />
+              </View>
               <Text style={styles.langTitle}>{t('onboarding.selectLanguage')}</Text>
-              <Pressable
-                style={[styles.langCard, lang === 'english' && styles.langCardActive]}
-                onPress={async () => {
-                  await setLang('english');
-                  goToStep(step + 1);
-                }}
-              >
-                <Text style={[styles.langCardText, lang === 'english' && styles.langCardTextActive]}>English</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.langCard, lang === 'filipino' && styles.langCardActive]}
-                onPress={async () => {
-                  await setLang('filipino');
-                  goToStep(step + 1);
-                }}
-              >
-                <Text style={[styles.langCardText, lang === 'filipino' && styles.langCardTextActive]}>Filipino</Text>
-              </Pressable>
+
+              <View style={styles.optionsStack}>
+                <Pressable
+                  style={[styles.optionCard, lang === 'english' && styles.optionCardActive]}
+                  onPress={async () => {
+                    await setLang('english');
+                    goToStep(step + 1);
+                  }}
+                >
+                  <Text style={[styles.optionCardText, lang === 'english' && styles.optionCardTextActive]}>
+                    English
+                  </Text>
+                  {lang === 'english' && (
+                    <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                  )}
+                </Pressable>
+                <Pressable
+                  style={[styles.optionCard, lang === 'filipino' && styles.optionCardActive]}
+                  onPress={async () => {
+                    await setLang('filipino');
+                    goToStep(step + 1);
+                  }}
+                >
+                  <Text style={[styles.optionCardText, lang === 'filipino' && styles.optionCardTextActive]}>
+                    Filipino
+                  </Text>
+                  {lang === 'filipino' && (
+                    <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                  )}
+                </Pressable>
+              </View>
             </View>
           )}
 
@@ -354,16 +375,14 @@ export default function CoachOnboarding() {
               stepKey="welcome"
             >
               <TextInput
-                style={styles.input}
+                style={styles.inputCard}
                 placeholder={getNamePlaceholder(lang)}
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor="#9CA3AF"
                 value={form.name}
                 onChangeText={(v) => updateForm({ name: v })}
                 autoFocus
               />
-              <Pressable style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>{getConfirmLabel(lang)}</Text>
-              </Pressable>
+              <PrimaryBtn label={getConfirmLabel(lang)} onPress={handleNext} />
             </StepContent>
           )}
 
@@ -376,18 +395,16 @@ export default function CoachOnboarding() {
               stepKey="age"
             >
               <TextInput
-                style={styles.input}
+                style={styles.inputCard}
                 placeholder={getAgePlaceholder(lang)}
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor="#9CA3AF"
                 value={form.age}
                 onChangeText={(v) => updateForm({ age: v.replace(/[^0-9]/g, '') })}
                 keyboardType="number-pad"
                 autoFocus
                 maxLength={3}
               />
-              <Pressable style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>{getConfirmLabel(lang)}</Text>
-              </Pressable>
+              <PrimaryBtn label={getConfirmLabel(lang)} onPress={handleNext} />
             </StepContent>
           )}
 
@@ -404,9 +421,9 @@ export default function CoachOnboarding() {
                   <Text style={styles.fieldLabel}>{t('onboarding.height')}</Text>
                   <View style={styles.inputWithUnit}>
                     <TextInput
-                      style={[styles.input, styles.inputFlex]}
+                      style={[styles.inputCard, styles.inputFlex]}
                       placeholder={`e.g. ${form.heightUnit === 'cm' ? '175' : "5'9\""}`}
-                      placeholderTextColor={Colors.textMuted}
+                      placeholderTextColor="#9CA3AF"
                       value={form.heightValue}
                       onChangeText={(v) => updateForm({ heightValue: v.replace(/[^0-9.]/g, '') })}
                       keyboardType="decimal-pad"
@@ -422,9 +439,9 @@ export default function CoachOnboarding() {
                   <Text style={styles.fieldLabel}>{t('onboarding.weight')}</Text>
                   <View style={styles.inputWithUnit}>
                     <TextInput
-                      style={[styles.input, styles.inputFlex]}
+                      style={[styles.inputCard, styles.inputFlex]}
                       placeholder={`e.g. ${form.weightUnit === 'kg' ? '70' : '154'}`}
-                      placeholderTextColor={Colors.textMuted}
+                      placeholderTextColor="#9CA3AF"
                       value={form.weightValue}
                       onChangeText={(v) => updateForm({ weightValue: v.replace(/[^0-9.]/g, '') })}
                       keyboardType="decimal-pad"
@@ -437,9 +454,7 @@ export default function CoachOnboarding() {
                   </View>
                 </View>
               </View>
-              <Pressable style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>{getContinueLabel(lang)}</Text>
-              </Pressable>
+              <PrimaryBtn label={getContinueLabel(lang)} onPress={handleNext} />
             </StepContent>
           )}
 
@@ -452,9 +467,7 @@ export default function CoachOnboarding() {
               stepKey="feedback"
             >
               {typingDone && (
-                <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)}>
-                  <Text style={styles.primaryBtnText}>{getContinueLabel(lang)}</Text>
-                </Pressable>
+                <PrimaryBtn label={getContinueLabel(lang)} onPress={() => goToStep(step + 1)} />
               )}
             </StepContent>
           )}
@@ -470,24 +483,25 @@ export default function CoachOnboarding() {
               onTypeDone={() => setTypingDone(true)}
               stepKey="goal"
             >
-              <View style={styles.chipGroup}>
+              <View style={styles.optionsStack}>
                 {goalKeys.map((g) => (
                   <Pressable
                     key={g}
-                    style={[styles.chip, form.goal === g && styles.chipActive]}
+                    style={[styles.optionCard, form.goal === g && styles.optionCardActive]}
                     onPress={() => updateForm({ goal: g })}
                   >
-                    <Text style={[styles.chipText, form.goal === g && styles.chipTextActive]}>
+                    <Text style={[styles.optionCardText, form.goal === g && styles.optionCardTextActive]}>
                       {getGoalLabel(lang, g)}
                     </Text>
+                    {form.goal === g && (
+                      <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                    )}
                   </Pressable>
                 ))}
               </View>
-              {form.goal && (
-                <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)}>
-                  <Text style={styles.primaryBtnText}>{getConfirmLabel(lang)}</Text>
-                </Pressable>
-              )}
+              {form.goal ? (
+                <PrimaryBtn label={getConfirmLabel(lang)} onPress={() => goToStep(step + 1)} />
+              ) : null}
             </StepContent>
           )}
 
@@ -505,13 +519,12 @@ export default function CoachOnboarding() {
               onTypeDone={() => setTypingDone(true)}
               stepKey="health"
             >
-              {/* Main answer chips — always shown once typing is done */}
               {typingDone && (
-                <View style={styles.chipRow}>
-                  {(['no', 'yes', 'skip'] as const).map((a) => (
+                <View style={styles.optionsStack}>
+                  {(['yes', 'no', 'skip'] as const).map((a) => (
                     <Pressable
                       key={a}
-                      style={[styles.chip, form.healthAnswer === a && styles.chipActive]}
+                      style={[styles.optionCard, form.healthAnswer === a && styles.optionCardActive]}
                       onPress={() => {
                         const wasYes = form.healthAnswer === 'yes';
                         const isYes = a === 'yes';
@@ -523,17 +536,18 @@ export default function CoachOnboarding() {
                         updateForm(patch);
                         setTypingDone(false);
                       }}
-                      accessibilityLabel={a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                     >
-                      <Text style={[styles.chipText, form.healthAnswer === a && styles.chipTextActive]}>
+                      <Text style={[styles.optionCardText, form.healthAnswer === a && styles.optionCardTextActive]}>
                         {a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                       </Text>
+                      {form.healthAnswer === a && (
+                        <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                      )}
                     </Pressable>
                   ))}
                 </View>
               )}
 
-              {/* Condition searchable multi-select */}
               {form.healthAnswer === 'yes' && typingDone && (
                 <>
                   <SearchableSelectList
@@ -550,18 +564,13 @@ export default function CoachOnboarding() {
                     safetyMessage={getHealthConditionSafetyNotice(lang)}
                   />
                   {form.healthConditions.length > 0 && (
-                    <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)} accessibilityLabel={getConfirmLabel(lang)}>
-                      <Text style={styles.primaryBtnText}>{getConfirmLabel(lang)}</Text>
-                    </Pressable>
+                    <PrimaryBtn label={getConfirmLabel(lang)} onPress={() => goToStep(step + 1)} />
                   )}
                 </>
               )}
 
-              {/* No / Skip response — continue */}
               {(form.healthAnswer === 'no' || form.healthAnswer === 'skip') && typingDone && (
-                <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)} accessibilityLabel={getContinueLabel(lang)}>
-                  <Text style={styles.primaryBtnText}>{getContinueLabel(lang)}</Text>
-                </Pressable>
+                <PrimaryBtn label={getContinueLabel(lang)} onPress={() => goToStep(step + 1)} />
               )}
             </StepContent>
           )}
@@ -580,13 +589,12 @@ export default function CoachOnboarding() {
               onTypeDone={() => setTypingDone(true)}
               stepKey="allergies"
             >
-              {/* Main answer chips — always shown once typing is done */}
               {typingDone && (
-                <View style={styles.chipRow}>
-                  {(['no', 'yes', 'skip'] as const).map((a) => (
+                <View style={styles.optionsStack}>
+                  {(['yes', 'no', 'skip'] as const).map((a) => (
                     <Pressable
                       key={a}
-                      style={[styles.chip, form.allergiesAnswer === a && styles.chipActive]}
+                      style={[styles.optionCard, form.allergiesAnswer === a && styles.optionCardActive]}
                       onPress={() => {
                         const wasYes = form.allergiesAnswer === 'yes';
                         const isYes = a === 'yes';
@@ -598,17 +606,18 @@ export default function CoachOnboarding() {
                         updateForm(patch);
                         setTypingDone(false);
                       }}
-                      accessibilityLabel={a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                     >
-                      <Text style={[styles.chipText, form.allergiesAnswer === a && styles.chipTextActive]}>
+                      <Text style={[styles.optionCardText, form.allergiesAnswer === a && styles.optionCardTextActive]}>
                         {a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                       </Text>
+                      {form.allergiesAnswer === a && (
+                        <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                      )}
                     </Pressable>
                   ))}
                 </View>
               )}
 
-              {/* Allergen searchable multi-select + intolerances + confirm */}
               {form.allergiesAnswer === 'yes' && typingDone && (
                 <>
                   <SearchableSelectList
@@ -628,28 +637,22 @@ export default function CoachOnboarding() {
                   <Text style={styles.sectionTitle}>{t('onboarding.intolerancesTitle')}</Text>
                   <Text style={styles.sectionHint}>{t('onboarding.intolerancesHint')}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={styles.inputCard}
                     placeholder={t('onboarding.intolerancesPlaceholder')}
-                    placeholderTextColor={Colors.textMuted}
+                    placeholderTextColor="#9CA3AF"
                     value={form.intolerances}
                     onChangeText={(v) => updateForm({ intolerances: v })}
                     multiline
                     numberOfLines={2}
-                    accessibilityLabel={t('onboarding.intolerancesTitle')}
                   />
                   {form.allergies.length > 0 && (
-                    <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)} accessibilityLabel={getConfirmLabel(lang)}>
-                      <Text style={styles.primaryBtnText}>{getConfirmLabel(lang)}</Text>
-                    </Pressable>
+                    <PrimaryBtn label={getConfirmLabel(lang)} onPress={() => goToStep(step + 1)} />
                   )}
                 </>
               )}
 
-              {/* No / Skip response — continue */}
               {(form.allergiesAnswer === 'no' || form.allergiesAnswer === 'skip') && typingDone && (
-                <Pressable style={styles.primaryBtn} onPress={() => goToStep(step + 1)} accessibilityLabel={getContinueLabel(lang)}>
-                  <Text style={styles.primaryBtnText}>{getContinueLabel(lang)}</Text>
-                </Pressable>
+                <PrimaryBtn label={getContinueLabel(lang)} onPress={() => goToStep(step + 1)} />
               )}
             </StepContent>
           )}
@@ -671,9 +674,7 @@ export default function CoachOnboarding() {
                       contentFit="contain"
                     />
                   </View>
-                  <Pressable style={styles.primaryBtn} onPress={finishOnboarding}>
-                    <Text style={styles.primaryBtnText}>{getGoToDashboardLabel(lang)}</Text>
-                  </Pressable>
+                  <PrimaryBtn label={getGoToDashboardLabel(lang)} onPress={finishOnboarding} />
                 </>
               )}
             </StepContent>
@@ -681,6 +682,15 @@ export default function CoachOnboarding() {
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function PrimaryBtn({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.primaryBtn} onPress={onPress}>
+      <Text style={styles.primaryBtnText}>{label}</Text>
+      <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+    </Pressable>
   );
 }
 
@@ -735,7 +745,7 @@ function StepContent({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+  root: { flex: 1, backgroundColor: '#F4F5F7' },
 
   topBar: {
     flexDirection: 'row',
@@ -744,11 +754,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
-  backBtn: { minWidth: 70, minHeight: 44, justifyContent: 'center' },
+  backBtn: {
+    minWidth: 70,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   backText: { fontSize: FontSize.md, color: Colors.textSecondary, fontWeight: FontWeight.medium },
   dotsRow: { flexDirection: 'row', gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.primary, width: 20, borderRadius: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D1D5DB' },
+  dotActive: { backgroundColor: '#D94A1E', width: 22, borderRadius: 4 },
 
   scroll: {
     padding: Spacing.lg,
@@ -756,103 +772,134 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     flexGrow: 1,
   },
-  stepContent: { gap: Spacing.lg },
+  stepContent: { gap: Spacing.md },
 
-  inputArea: { gap: Spacing.md },
-  input: {
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+  inputArea: { gap: Spacing.md, marginTop: Spacing.sm },
+
+  inputCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    padding: 16,
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    color: '#111827',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 1,
   },
   inputFlex: { flex: 1 },
 
   dualRow: { flexDirection: 'row', gap: Spacing.sm },
   dualField: { flex: 1, gap: 6 },
-  fieldLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.textSecondary },
-  inputWithUnit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  fieldLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: '#4B5563' },
+  inputWithUnit: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   unitToggle: {
     flexDirection: 'row',
-    borderRadius: Radius.sm,
+    borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
-  unitOption: { paddingHorizontal: 10, paddingVertical: 10, backgroundColor: Colors.bgCard },
-  unitOptionActive: { backgroundColor: Colors.primary },
-  unitText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textSecondary },
-  unitTextActive: { color: Colors.textInverse },
+  unitOption: { paddingHorizontal: 12, paddingVertical: 14, backgroundColor: '#FFFFFF' },
+  unitOptionActive: { backgroundColor: '#D94A1E' },
+  unitText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: '#4B5563' },
+  unitTextActive: { color: '#FFFFFF' },
 
   sectionSpacer: { height: Spacing.md },
   sectionTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: '#111827',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   sectionHint: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: '#6B7280',
     lineHeight: 18,
   },
-  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chipRow: { flexDirection: 'row', gap: Spacing.sm },
-  chip: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bgCard,
+
+  optionsStack: { gap: 12 },
+  optionCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 1,
   },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
-  chipText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
-  chipTextActive: { color: Colors.primary, fontWeight: FontWeight.bold },
+  optionCardActive: {
+    borderColor: '#D94A1E',
+    backgroundColor: '#FFF8F5',
+  },
+  optionCardText: {
+    fontSize: FontSize.md,
+    color: '#1F2937',
+    fontWeight: FontWeight.medium,
+  },
+  optionCardTextActive: {
+    color: '#D94A1E',
+    fontWeight: FontWeight.bold,
+  },
 
   primaryBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: Radius.full,
+    alignSelf: 'stretch',
+    backgroundColor: '#D94A1E',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.md,
+    shadowColor: '#D94A1E',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   primaryBtnText: {
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     fontWeight: FontWeight.bold,
     fontSize: FontSize.md,
+    letterSpacing: 0.2,
   },
 
   langScreen: {
     flex: 1,
-    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  langMascotStage: {
     alignItems: 'center',
-    gap: Spacing.lg,
-    paddingVertical: 80,
+    justifyContent: 'center',
+    height: 140,
+    marginBottom: Spacing.sm,
+  },
+  langMascot: {
+    width: 120,
+    height: 120,
   },
   langTitle: {
-    fontSize: FontSize.xxl,
+    fontSize: 22,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    color: '#111827',
+    marginBottom: Spacing.sm,
   },
-  langCard: {
-    width: '80%',
-    paddingVertical: 18,
-    borderRadius: Radius.lg,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    backgroundColor: Colors.bgCard,
-    alignItems: 'center',
-  },
-  langCardActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
-  langCardText: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
-  langCardTextActive: { color: Colors.primary },
 
   finishMascotWrap: { alignItems: 'center', marginVertical: Spacing.md },
-  finishMascot: { width: 140, height: 140 },
+  finishMascot: { width: 150, height: 150 },
 });

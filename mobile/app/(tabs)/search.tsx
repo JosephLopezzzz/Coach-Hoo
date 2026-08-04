@@ -206,14 +206,6 @@ export default function SearchScreen() {
         cooking_method: 'raw',
         with_bones: false
       }]);
-      Alert.alert(
-        t('search.loggedTitle'),
-        t('search.loggedBody', {
-          name: item.name,
-          grams: Math.round(quantity_g),
-          mealType: getMealTypeLabel(lang, mealType),
-        }),
-      );
     } catch (err: any) {
       Alert.alert(t('common.error'), err.message || t('search.couldNotLog'));
     }

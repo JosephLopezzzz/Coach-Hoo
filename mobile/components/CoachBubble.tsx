@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import TypewriterText from './TypewriterText';
 import type { TypewriterTextHandle } from './TypewriterText';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 
 interface CoachBubbleProps {
   message: string;
@@ -21,8 +21,9 @@ export default function CoachBubble({
   const typewriterRef = useRef<TypewriterTextHandle>(null);
 
   return (
-    <View style={styles.row}>
-      <View style={styles.mascotFrame}>
+    <View style={styles.container}>
+      <View style={styles.mascotStage}>
+        <View style={styles.backdropAngle} />
         <Image
           source={require('../assets/mascot/idle.gif')}
           style={styles.mascot}
@@ -31,18 +32,17 @@ export default function CoachBubble({
           cachePolicy="memory-disk"
         />
       </View>
-      <Pressable onPress={() => typewriterRef.current?.skip()} style={styles.bubble}>
-        <View style={styles.tail} />
+      <Pressable onPress={() => typewriterRef.current?.skip()} style={styles.textWrap}>
         {typewriter ? (
           <TypewriterText
             ref={typewriterRef}
             text={message}
             speed={typewriterSpeed}
-            style={styles.message}
+            style={styles.questionText}
             onComplete={onTypeComplete}
           />
         ) : (
-          <Text style={styles.message}>{message}</Text>
+          <Text style={styles.questionText}>{message}</Text>
         )}
       </Pressable>
     </View>
@@ -50,47 +50,41 @@ export default function CoachBubble({
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+  container: {
+    alignItems: 'stretch',
     marginBottom: Spacing.md,
   },
-  mascotFrame: {
-    width: 80,
-    height: 80,
+  mascotStage: {
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: Spacing.md,
+    position: 'relative',
+  },
+  backdropAngle: {
+    position: 'absolute',
+    top: 0,
+    left: -20,
+    right: -20,
+    bottom: 20,
+    backgroundColor: '#EBECEE',
+    borderBottomRightRadius: 40,
+    transform: [{ rotate: '-3deg' }],
   },
   mascot: {
-    width: 72,
-    height: 72,
+    width: 125,
+    height: 125,
+    zIndex: 2,
   },
-  bubble: {
-    flex: 1,
-    backgroundColor: '#FFF5E6',
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
+  textWrap: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
   },
-  tail: {
-    position: 'absolute',
-    left: -7,
-    top: 28,
-    width: 12,
-    height: 12,
-    backgroundColor: '#FFF5E6',
-    borderLeftWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: Colors.primary,
-    transform: [{ rotate: '45deg' }],
-  },
-  message: {
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    fontWeight: FontWeight.medium,
-    lineHeight: 22,
+  questionText: {
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+    color: '#111827',
+    lineHeight: 30,
+    letterSpacing: -0.4,
   },
 });

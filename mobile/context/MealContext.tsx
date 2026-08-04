@@ -4,6 +4,9 @@ import React, {
 import { mealsApi } from '../services/api';
 import type { Meal, MacroResult, DailyTargets, LogItem } from '../types';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
+import { useToast } from './ToastContext';
+import { getMealTypeLabel } from '../constants/i18n';
 
 interface MealContextType {
   meals:      Meal[];
@@ -22,6 +25,8 @@ const MealContext = createContext<MealContextType | null>(null);
 
 export function MealProvider({ children }: { children: React.ReactNode }) {
   const { isOnboarded } = useAuth();
+  const { lang, t } = useLanguage();
+  const { showToast } = useToast();
   const [meals,     setMeals]     = useState<Meal[]>([]);
   const [totals,    setTotals]    = useState<MacroResult>(DEFAULT_TOTALS);
   const [targets,   setTargets]   = useState<DailyTargets | null>(null);
@@ -56,7 +61,20 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
   ) => {
     await mealsApi.log({ meal_type, items, notes });
     await loadToday(); // refresh after log
-  }, [loadToday]);
+
+    // Trigger meal logged notification toast for all logging events
+    const mealLabel = getMealTypeLabel(lang, meal_type);
+    const count = items.length;
+    const toastSubtitle = t(
+      count === 1 ? 'log.successBody' : 'log.successBodyPlural',
+      { mealType: mealLabel, count },
+    );
+    showToast({
+      type: 'success',
+      title: t('log.successTitle') || 'Meal logged!',
+      subtitle: `🎉 ${toastSubtitle}`,
+    });
+  }, [loadToday, lang, t, showToast]);
 
   const deleteMeal = useCallback(async (id: string) => {
     await mealsApi.delete(id);

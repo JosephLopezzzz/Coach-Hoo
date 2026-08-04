@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { MealProvider } from '../context/MealContext';
 import { LanguageProvider } from '../context/LanguageContext';
+import { ToastProvider } from '../context/ToastContext';
 import { Colors } from '../constants/theme';
 
 function RootLayoutNav() {
@@ -30,10 +31,12 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <LanguageProvider>
-        <MealProvider>
-          <StatusBar style="dark" backgroundColor={Colors.bg} />
-          <RootLayoutNav />
-        </MealProvider>
+        <ToastProvider>
+          <MealProvider>
+            <StatusBar style="dark" backgroundColor={Colors.bg} />
+            <RootLayoutNav />
+          </MealProvider>
+        </ToastProvider>
       </LanguageProvider>
     </AuthProvider>
   );
