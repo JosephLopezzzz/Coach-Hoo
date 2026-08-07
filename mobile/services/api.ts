@@ -1,57 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { findAllergenMatches } from './allergenService';
+import { FOODS_DB, RECIPES_DB } from './foodDb';
 
-// ─── Core Offline Databases ───────────────────────────────────────────────────
+export { FOODS_DB, RECIPES_DB };
 
-export const FOODS_DB = [
-  { id: 'f1', name: 'Chicken Breast', category: 'poultry', calories_per_100g: 165, protein_per_100g: 31, carbs_per_100g: 0, fat_per_100g: 3.6, is_raw: true, source: 'USDA' },
-  { id: 'f2', name: 'Chicken Thigh', category: 'poultry', calories_per_100g: 209, protein_per_100g: 26, carbs_per_100g: 0, fat_per_100g: 10.9, is_raw: true, source: 'USDA' },
-  { id: 'f3', name: 'Chicken Wings', category: 'poultry', calories_per_100g: 203, protein_per_100g: 30, carbs_per_100g: 0, fat_per_100g: 8.1, is_raw: true, source: 'USDA' },
-  { id: 'f4', name: 'Pork Belly', category: 'pork', calories_per_100g: 518, protein_per_100g: 9, carbs_per_100g: 0, fat_per_100g: 53, is_raw: true, source: 'USDA' },
-  { id: 'f5', name: 'Ground Beef', category: 'beef', calories_per_100g: 250, protein_per_100g: 26, carbs_per_100g: 0, fat_per_100g: 15, is_raw: true, source: 'USDA' },
-  { id: 'f6', name: 'Egg (Whole)', category: 'dairy-eggs', calories_per_100g: 155, protein_per_100g: 13, carbs_per_100g: 1.1, fat_per_100g: 11, is_raw: false, source: 'USDA' },
-  { id: 'f7', name: 'White Rice (Cooked)', category: 'grains', calories_per_100g: 130, protein_per_100g: 2.7, carbs_per_100g: 28, fat_per_100g: 0.3, is_raw: false, source: 'USDA' },
-  { id: 'f8', name: 'Brown Rice (Cooked)', category: 'grains', calories_per_100g: 111, protein_per_100g: 2.6, carbs_per_100g: 23, fat_per_100g: 0.9, is_raw: false, source: 'USDA' },
-  { id: 'f9', name: 'Tilapia', category: 'fish', calories_per_100g: 96, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 1.7, is_raw: true, source: 'USDA' },
-  { id: 'f10', name: 'Bangus (Milkfish)', category: 'fish', calories_per_100g: 148, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 6.7, is_raw: true, source: 'FNRI' },
-  { id: 'f11', name: 'Tofu', category: 'soy', calories_per_100g: 76, protein_per_100g: 8, carbs_per_100g: 1.9, fat_per_100g: 4.8, is_raw: false, source: 'USDA' },
-  { id: 'f12', name: 'Shrimp', category: 'seafood', calories_per_100g: 85, protein_per_100g: 20, carbs_per_100g: 0, fat_per_100g: 0.5, is_raw: true, source: 'USDA' },
-  { id: 'f13', name: 'Squid', category: 'seafood', calories_per_100g: 92, protein_per_100g: 16, carbs_per_100g: 3, fat_per_100g: 1.4, is_raw: true, source: 'USDA' },
-  { id: 'f14', name: 'Pork Chop', category: 'pork', calories_per_100g: 231, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 14, is_raw: true, source: 'USDA' },
-  { id: 'f15', name: 'Beef Ribeye', category: 'beef', calories_per_100g: 291, protein_per_100g: 24, carbs_per_100g: 0, fat_per_100g: 22, is_raw: true, source: 'USDA' },
-  { id: 'f16', name: 'Milk (Whole)', category: 'beverages', calories_per_100g: 61, protein_per_100g: 3.2, carbs_per_100g: 4.8, fat_per_100g: 3.3, is_raw: false, source: 'USDA' },
-  { id: 'f17', name: 'Soda (Coke)', category: 'beverages', calories_per_100g: 38, protein_per_100g: 0, carbs_per_100g: 9.8, fat_per_100g: 0, is_raw: false, source: 'USDA' },
-  { id: 'f18', name: 'Black Coffee', category: 'beverages', calories_per_100g: 2, protein_per_100g: 0.3, carbs_per_100g: 0, fat_per_100g: 0, is_raw: false, source: 'USDA' },
-  { id: 'f19', name: 'Orange Juice', category: 'beverages', calories_per_100g: 45, protein_per_100g: 0.7, carbs_per_100g: 10.4, fat_per_100g: 0.2, is_raw: false, source: 'USDA' },
-  { id: 'f20', name: 'Whey Protein Shake', category: 'beverages', calories_per_100g: 80, protein_per_100g: 16, carbs_per_100g: 1.5, fat_per_100g: 1, is_raw: false, source: 'USDA' },
-  { id: 'f21', name: 'Broccoli', category: 'vegetables', calories_per_100g: 34, protein_per_100g: 2.8, carbs_per_100g: 7, fat_per_100g: 0.4, is_raw: true, source: 'USDA' },
-  { id: 'f22', name: 'Spinach', category: 'vegetables', calories_per_100g: 23, protein_per_100g: 2.9, carbs_per_100g: 3.6, fat_per_100g: 0.4, is_raw: true, source: 'USDA' },
-  { id: 'f23', name: 'Kangkong', category: 'vegetables', calories_per_100g: 19, protein_per_100g: 2.6, carbs_per_100g: 3.1, fat_per_100g: 0.2, is_raw: true, source: 'FNRI' },
-  { id: 'f24', name: 'Potato', category: 'vegetables', calories_per_100g: 87, protein_per_100g: 2, carbs_per_100g: 20, fat_per_100g: 0.1, is_raw: true, source: 'USDA' },
-  { id: 'f25', name: 'Cabbage', category: 'vegetables', calories_per_100g: 25, protein_per_100g: 1.3, carbs_per_100g: 6, fat_per_100g: 0.1, is_raw: true, source: 'USDA' },
-  { id: 'f26', name: 'Banana', category: 'fruits', calories_per_100g: 89, protein_per_100g: 1.1, carbs_per_100g: 23, fat_per_100g: 0.3, is_raw: false, source: 'USDA' },
-  { id: 'f27', name: 'Apple', category: 'fruits', calories_per_100g: 52, protein_per_100g: 0.3, carbs_per_100g: 14, fat_per_100g: 0.2, is_raw: false, source: 'USDA' },
-  { id: 'f28', name: 'Mango', category: 'fruits', calories_per_100g: 60, protein_per_100g: 0.8, carbs_per_100g: 15, fat_per_100g: 0.4, is_raw: false, source: 'USDA' },
-  { id: 'f29', name: 'Avocado', category: 'fruits', calories_per_100g: 160, protein_per_100g: 2, carbs_per_100g: 9, fat_per_100g: 15, is_raw: false, source: 'USDA' },
-  { id: 'f30', name: 'Calamansi', category: 'fruits', calories_per_100g: 30, protein_per_100g: 0.5, carbs_per_100g: 7, fat_per_100g: 0.1, is_raw: false, source: 'FNRI' },
-  { id: 'f31', name: 'Olive Oil', category: 'fats', calories_per_100g: 884, protein_per_100g: 0, carbs_per_100g: 0, fat_per_100g: 100, is_raw: false, source: 'USDA' },
-  { id: 'f32', name: 'Butter', category: 'fats', calories_per_100g: 717, protein_per_100g: 0.9, carbs_per_100g: 0.1, fat_per_100g: 81, is_raw: false, source: 'USDA' },
-  { id: 'f33', name: 'Cheese (Cheddar)', category: 'dairy-eggs', calories_per_100g: 402, protein_per_100g: 25, carbs_per_100g: 1.3, fat_per_100g: 33, is_raw: false, source: 'USDA' },
-  { id: 'f34', name: 'Mayonnaise', category: 'fats', calories_per_100g: 680, protein_per_100g: 1, carbs_per_100g: 0.6, fat_per_100g: 75, is_raw: false, source: 'USDA' },
-  { id: 'f35', name: 'Soy Sauce', category: 'sauces', calories_per_100g: 53, protein_per_100g: 8, carbs_per_100g: 5, fat_per_100g: 0.6, is_raw: false, source: 'USDA' },
-  { id: 'f36', name: 'Ketchup', category: 'sauces', calories_per_100g: 101, protein_per_100g: 1, carbs_per_100g: 27, fat_per_100g: 0.2, is_raw: false, source: 'USDA' },
-  { id: 'f37', name: 'Peanut Butter', category: 'fats', calories_per_100g: 588, protein_per_100g: 25, carbs_per_100g: 20, fat_per_100g: 50, is_raw: false, source: 'USDA' },
-];
-
-export const RECIPES_DB = [
-  { id: 'r1', name: 'Chicken Adobo', country: 'PH', total_weight_g: 500, description: 'Classic Filipino soy-sauce and vinegar stewed chicken', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 180, protein: 18, carbs: 3, fat: 11 }, ingredients: [{name: 'Chicken', base_qty_g: 400}, {name: 'Soy Sauce', base_qty_g: 50}, {name: 'Vinegar', base_qty_g: 30}, {name: 'Garlic', base_qty_g: 10}, {name: 'Oil', base_qty_g: 10}] },
-  { id: 'r2', name: 'Pork Sinigang', country: 'PH', total_weight_g: 600, description: 'Sour tamarind soup with pork ribs and mixed vegetables', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 120, protein: 10, carbs: 4, fat: 7 }, ingredients: [{name: 'Pork Ribs', base_qty_g: 300}, {name: 'Water', base_qty_g: 200}, {name: 'Kangkong', base_qty_g: 50}, {name: 'Tamarind Mix', base_qty_g: 20}, {name: 'Tomato', base_qty_g: 30}] },
-  { id: 'r3', name: 'Chicken Tinola', country: 'PH', total_weight_g: 500, description: 'Ginger-flavored chicken soup with green papaya and chili leaves', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 90, protein: 12, carbs: 2, fat: 4 }, ingredients: [{name: 'Chicken', base_qty_g: 300}, {name: 'Water', base_qty_g: 100}, {name: 'Green Papaya', base_qty_g: 80}, {name: 'Ginger', base_qty_g: 10}, {name: 'Chili Leaves', base_qty_g: 10}] },
-  { id: 'r4', name: 'Beef Kare-Kare', country: 'PH', total_weight_g: 650, description: 'Beef stew in a thick savory peanut sauce with vegetables', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 220, protein: 15, carbs: 8, fat: 14 }, ingredients: [{name: 'Beef Oxtail', base_qty_g: 350}, {name: 'Peanut Butter', base_qty_g: 100}, {name: 'Eggplant', base_qty_g: 50}, {name: 'Bok Choy', base_qty_g: 50}, {name: 'Water', base_qty_g: 100}] },
-  { id: 'r5', name: 'Chicken Inasal', country: 'PH', total_weight_g: 300, description: 'Ilonggo-style grilled chicken marinated in calamansi, lemongrass, and annatto', meal_types: ['lunch', 'dinner'], macros_per_100g: { calories: 195, protein: 24, carbs: 1, fat: 10 }, ingredients: [{name: 'Chicken Leg', base_qty_g: 250}, {name: 'Calamansi', base_qty_g: 20}, {name: 'Lemongrass', base_qty_g: 10}, {name: 'Annatto Oil', base_qty_g: 20}] },
-];
-
-// Removed hardcoded RESTAURANT_DB as per user request to allow custom scanning/adding
+// Restaurants are added at runtime (custom scanning/adding), so the DB starts empty.
 export const RESTAURANT_DB: any[] = [];
 
 // ─── Local Helpers ────────────────────────────────────────────────────────────
@@ -74,7 +28,7 @@ async function saveLocalMeals(meals: any[]) {
   }
 }
 
-async function getCustomFoods(): Promise<any[]> {
+export async function getCustomFoods(): Promise<any[]> {
   try {
     const raw = await AsyncStorage.getItem('coach_hoo_custom_foods');
     return raw ? JSON.parse(raw) : [];
@@ -104,7 +58,7 @@ async function deleteCustomFood(id: string) {
   }
 }
 
-async function getCustomFastFoods(): Promise<any[]> {
+export async function getCustomFastFoods(): Promise<any[]> {
   try {
     const raw = await AsyncStorage.getItem('coach_hoo_custom_fast_foods');
     return raw ? JSON.parse(raw) : [];
@@ -522,17 +476,13 @@ export const recommendApi = {
       list = list.filter(r => r.meal_types.includes(meal_type));
     }
 
-    // Filter out recipes that contain allergen ingredients
-    const allergenLower = allergies.map(a => a.toLowerCase());
-    if (allergenLower.length > 0) {
-      list = list.filter(r =>
-        !r.ingredients.some(ing =>
-          allergenLower.some(allergen =>
-            ing.name.toLowerCase().includes(allergen) ||
-            allergen.includes(ing.name.toLowerCase())
-          )
-        )
-      );
+    // Filter out recipes that contain allergen ingredients (uses shared allergen
+    // signals so e.g. crustacean→Shrimp, mollusks→Squid, fish→Tilapia/Bangus match).
+    if (allergies.length > 0) {
+      list = list.filter(r => {
+        const ingredientNames = (r.ingredients ?? []).map(ing => ing.name);
+        return findAllergenMatches({ allergies }, ingredientNames).length === 0;
+      });
     }
 
     // Shuffle for variety (Fisher-Yates)
@@ -570,7 +520,7 @@ export const recommendApi = {
         },
         remaining_after: { calories: 0, protein: 0, carbs: 0, fat: 0 },
         fit_score: 95 - index * 5,
-        allergen_filtered: allergenLower.length > 0,
+        allergen_filtered: allergies.length > 0,
       };
     });
     return { data: recommendations };

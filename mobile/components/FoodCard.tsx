@@ -17,6 +17,7 @@ interface FoodCardProps {
   onPress?:  () => void;
   onAdd?:    () => void;
   compact?:  boolean;
+  allergenWarning?: string;
 }
 
 function MacroPill({ value, label, color }: { value: number; label: string; color: string }) {
@@ -28,7 +29,7 @@ function MacroPill({ value, label, color }: { value: number; label: string; colo
   );
 }
 
-export default function FoodCard({ item, onPress, onAdd, compact = false }: FoodCardProps) {
+export default function FoodCard({ item, onPress, onAdd, compact = false, allergenWarning }: FoodCardProps) {
   const { t } = useLanguage();
   let name = '';
   let calories = 0;
@@ -94,6 +95,13 @@ export default function FoodCard({ item, onPress, onAdd, compact = false }: Food
         </View>
       )}
 
+      {allergenWarning ? (
+        <View style={styles.allergenBadge}>
+          <Ionicons name="warning" size={12} color="#fff" />
+          <Text style={styles.allergenBadgeText} numberOfLines={2}>{allergenWarning}</Text>
+        </View>
+      ) : null}
+
       {onAdd && (
         <Pressable style={styles.addBtn} onPress={onAdd} hitSlop={8}>
           <Ionicons name="add-circle" size={28} color={Colors.primary} />
@@ -156,6 +164,24 @@ const styles = StyleSheet.create({
   macros: {
     flexDirection: 'row',
     gap: 6,
+  },
+  allergenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.error,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 8,
+    maxWidth: '100%',
+  },
+  allergenBadgeText: {
+    color: '#fff',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    flexShrink: 1,
   },
   pill: {
     flexDirection: 'row',

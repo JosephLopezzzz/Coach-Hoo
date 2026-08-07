@@ -339,6 +339,9 @@ export const STRINGS = {
   'log.successBodyPlural': ['{mealType} logged with {count} items', 'Na-log ang {mealType} na may {count} item'],
   'log.failedTitle':    ['Logging Failed', 'Nabigo ang Pag-log'],
   'log.failedBody':     ['Could not log meal.', 'Hindi ma-log ang pagkain.'],
+  'log.allergenTitle':  ['Allergy alert ⚠️', 'Alerto sa allergy ⚠️'],
+  'log.allergenBody':   ['This contains allergens you registered: {allergens}', 'Naglalaman ito ng allergen na mayroon ka: {allergens}'],
+  'log.logAnyway':      ['Log anyway', 'I-log pa rin'],
 
   // Manual entry form
   'form.foodType':       ['Food Type', 'Uri ng Pagkain'],
@@ -352,6 +355,7 @@ export const STRINGS = {
   'form.addToMeal':      ['Add to Meal', 'Idagdag sa Pagkain'],
   'form.errFoodType':    ['Enter a food type', 'Ilagay ang uri ng pagkain'],
   'form.errWeight':      ['Enter a valid weight (g)', 'Ilagay ang wastong bigat (g)'],
+  'form.liveAllergen':   ['Contains allergens you have: {allergens}', 'Naglalaman ng allergen mo: {allergens}'],
 
   // ── Search screen ──────────────────────────────────────────────────────────
   'search.title':          ['Find Food', 'Maghanap ng Pagkain'],
@@ -377,6 +381,7 @@ export const STRINGS = {
   'search.typeSource':       ['Type / Source', 'Uri / Pinagmulan'],
   'search.macrosBreakdown':  ['Macros Breakdown', 'Detalye ng Macros'],
   'search.servingSize':      ['Serving size: {grams}g', 'Laki ng serving: {grams}g'],
+  'search.containsAllergen': ['Contains allergen: {allergens}', 'Naglalaman ng allergen: {allergens}'],
   'search.ingredients':      ['Ingredients ({grams}g portion):', 'Sangkap ({grams}g na bahagi):'],
   'search.selectMealType':   ['Select meal type to log "{name}":', 'Piliin ang uri ng pagkain para i-log ang "{name}":'],
   'search.loggedTitle':      ['Logged! 🎉', 'Na-log! 🎉'],
@@ -586,6 +591,8 @@ export const STRINGS = {
     'Tuka! Matagumpay na na-log ang na-scan mong item na **{name}** sa iyong **{mealType}**! 🐔🎉\n\n🔥 **Calories**: {cal} kcal\n💪 **Protina**: {p}g\n🌾 **Carbs**: {c}g\n🥑 **Taba**: {f}g',
   ],
   'chat.scannedPrefix': ['📸 Scanned Nutrition Facts: {name}', '📸 Na-scan na Nutrition Facts: {name}'],
+  'chat.allergenLoggedTitle': ['Allergy alert ⚠️', 'Alerto sa allergy ⚠️'],
+  'chat.allergenLoggedBody': ['This meal contains allergens you registered: {allergens}. Please be careful!', 'Naglalaman ang pagkain na ito ng allergen na mayroon ka: {allergens}. Mag-ingat!'],
   'chat.recNoMatch': [
     "Hmm, I couldn't find recipes that match your allergies for your remaining calories. You may need to track manually or check the Search tab for options!",
     'Hmm, wala akong nahanap na recipe na tugma sa iyong mga allergy para sa natitira mong calories. Baka kailangan mong mag-track nang manual o tingnan ang Search tab!',

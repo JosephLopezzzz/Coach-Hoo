@@ -6,7 +6,9 @@ import {
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 import { COOKING_METHODS, FOOD_TYPES } from '../constants/theme';
 import { useLanguage } from '../context/LanguageContext';
-import { getCookingMethodLabel } from '../constants/i18n';
+import { useAuth } from '../context/AuthContext';
+import { getCookingMethodLabel, labelForOptionKey } from '../constants/i18n';
+import { findTextAllergens } from '../services/allergenService';
 import type { LogManualItem } from '../types';
 
 interface ManualEntryFormProps {
@@ -65,6 +67,7 @@ function FoodTypeChips({
 
 export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const { lang, t } = useLanguage();
+  const { user } = useAuth();
   const [foodType,      setFoodType]      = useState('chicken');
   const [cookingMethod, setCookingMethod] = useState('raw');
   const [grams,         setGrams]         = useState('100');
@@ -73,6 +76,12 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [showMacros,    setShowMacros]    = useState(false);
   const [macros,        setMacros]        = useState({ cal: '', p: '', c: '', f: '' });
   const [error,         setError]         = useState('');
+  const [liveAllergens, setLiveAllergens] = useState<string[]>([]);
+
+  const handleFoodTypeChange = (text: string) => {
+    setFoodType(text);
+    setLiveAllergens(findTextAllergens(user, text));
+  };
 
   const cookingOptions = React.useMemo(
     () => COOKING_METHODS.map((m) => ({ key: m.key, label: getCookingMethodLabel(lang, m.key) })),
@@ -109,7 +118,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.sectionLabel}>{t('form.foodType')}</Text>
-      <FoodTypeChips value={foodType} onChange={setFoodType} />
+      <FoodTypeChips value={foodType} onChange={handleFoodTypeChange} />
 
       {/* Custom text override */}
       <TextInput
@@ -117,7 +126,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         placeholder={t('form.foodPlaceholder')}
         placeholderTextColor={Colors.textMuted}
         value={foodType}
-        onChangeText={setFoodType}
+        onChangeText={handleFoodTypeChange}
       />
 
       <Text style={styles.sectionLabel}>{t('form.cookingMethod')}</Text>
@@ -215,6 +224,14 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {liveAllergens.length > 0 && (
+        <View style={styles.allergenWarning}>
+          <Text style={styles.allergenWarningText}>
+            ⚠️ {t('form.liveAllergen', { allergens: liveAllergens.map((a) => labelForOptionKey(lang, a)).join(', ') })}
+          </Text>
+        </View>
+      )}
 
       <Pressable style={styles.submitBtn} onPress={handleSubmit}>
         <Text style={styles.submitText}>{t('form.addToMeal')}</Text>
@@ -368,6 +385,22 @@ const styles = StyleSheet.create({
   error: {
     color: Colors.error,
     fontSize: FontSize.sm,
+  },
+  allergenWarning: {
+    backgroundColor: `${Colors.error}12`,
+    borderWidth: 1,
+    borderColor: `${Colors.error}45`,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  allergenWarningText: {
+    color: Colors.error,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    flex: 1,
   },
   submitBtn: {
     backgroundColor: Colors.primary,

@@ -7,13 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { foodsApi, recipesApi, recommendApi, RECIPES_DB } from '../../services/api';
+import { findAllergenMatches } from '../../services/allergenService';
 import FoodCard from '../../components/FoodCard';
 import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import type { Food, Recipe, RestaurantFood } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useMeals } from '../../context/MealContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { getMealTypeLabel } from '../../constants/i18n';
+import { getMealTypeLabel, labelForOptionKey } from '../../constants/i18n';
 import type { StringKey } from '../../constants/strings';
 
 type TabKey = 'foods' | 'restaurant';
@@ -197,7 +198,31 @@ export default function SearchScreen() {
     );
   };
 
+  const allergenKeywordsFor = (item: any): string[] => {
+    if (item.ingredients?.length) {
+      return [item.name, ...item.ingredients.map((ing: any) => ing?.name ?? ing)];
+    }
+    return [String(item.name || '')];
+  };
+
   const performLog = async (item: any, type: string, quantity_g: number, mealType: string) => {
+    const matched = findAllergenMatches(user, allergenKeywordsFor(item));
+    if (matched.length === 0) {
+      runLog(item, type, quantity_g, mealType);
+      return;
+    }
+    const labels = matched.map((a) => labelForOptionKey(lang, a)).join(', ');
+    Alert.alert(
+      t('log.allergenTitle'),
+      t('log.allergenBody', { allergens: labels }),
+      [
+        { text: t('common.cancel'), style: 'cancel' as const },
+        { text: t('log.logAnyway'), style: 'destructive' as const, onPress: () => runLog(item, type, quantity_g, mealType) },
+      ],
+    );
+  };
+
+  const runLog = async (item: any, type: string, quantity_g: number, mealType: string) => {
     try {
       await logMeal(mealType, [{
         type: type as any,
@@ -212,6 +237,12 @@ export default function SearchScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => {
+    const allergenWarning = (() => {
+      const matched = findAllergenMatches(user, allergenKeywordsFor(item));
+      if (matched.length === 0) return undefined;
+      return `⚠️ ${t('search.containsAllergen', { allergens: matched.map((a) => labelForOptionKey(lang, a)).join(', ') })}`;
+    })();
+
     if (activeTab === 'foods') {
       const isRecipe = !!item.meal_types;
       const isCustom = item.id.startsWith('f_user_');
@@ -219,6 +250,7 @@ export default function SearchScreen() {
         <View style={styles.cardWrapper}>
           <FoodCard
             item={{ source: isRecipe ? 'recipe' : 'food', data: item }}
+            allergenWarning={allergenWarning}
             onPress={() => {
               setSelectedItem(item);
               setSelectedItemSource(isRecipe ? 'recipe' : 'food');
@@ -242,6 +274,7 @@ export default function SearchScreen() {
       <View style={styles.cardWrapper}>
         <FoodCard
           item={{ source: 'restaurant', data: item }}
+          allergenWarning={allergenWarning}
           onPress={() => {
             setSelectedItem(item);
             setSelectedItemSource('restaurant');

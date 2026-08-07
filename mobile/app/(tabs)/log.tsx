@@ -1,34 +1,39 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMeals } from '../../context/MealContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { getMealTypeLabel, getCookingMethodLabel } from '../../constants/i18n';
+import { getMealTypeLabel, getCookingMethodLabel, labelForOptionKey } from '../../constants/i18n';
 import ManualEntryForm from '../../components/ManualEntryForm';
 import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import type { LogItem } from '../../types';
 import { calculateApi } from '../../services/api';
+import { resolveLogItemKeywords, findAllergenMatches } from '../../services/allergenService';
 
 export default function LogMealScreen() {
   const { logMeal } = useMeals();
   const { showToast } = useToast();
   const { lang, t } = useLanguage();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [mealType, setMealType] = useState<string>('breakfast');
   const [items,    setItems]    = useState<LogItem[]>([]);
+  const [flagged,  setFlagged]  = useState<boolean[]>([]);
   const [preview,  setPreview]  = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [tab,      setTab]      = useState<'manual' | 'preview'>('manual');
 
-  const addItem = async (item: LogItem) => {
+  const addItem = async (item: LogItem, isFlagged = false) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const newItems = [...items, item];
+    setFlagged((prev) => [...prev, isFlagged]);
     setItems(newItems);
     try {
       const { data } = await calculateApi.macros(newItems);
@@ -43,8 +48,33 @@ export default function LogMealScreen() {
     }
   };
 
+  const confirmAddItem = async (item: LogItem) => {
+    const keywords = await resolveLogItemKeywords(item);
+    const matched = findAllergenMatches(user, keywords);
+
+    if (matched.length === 0) {
+      addItem(item);
+      return;
+    }
+
+    const allergenLabels = matched.map((a) => labelForOptionKey(lang, a)).join(', ');
+    Alert.alert(
+      t('log.allergenTitle'),
+      t('log.allergenBody', { allergens: allergenLabels }),
+      [
+        { text: t('common.cancel'), style: 'cancel' as const },
+        {
+          text: t('log.logAnyway'),
+          style: 'destructive' as const,
+          onPress: () => addItem(item, true),
+        },
+      ],
+    );
+  };
+
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+    setFlagged((prev) => prev.filter((_, i) => i !== index));
     if (items.length <= 1) setPreview(null);
   };
 
@@ -61,6 +91,7 @@ export default function LogMealScreen() {
     try {
       await logMeal(mealType, items);
       setItems([]);
+      setFlagged([]);
       setPreview(null);
     } catch (err: any) {
       console.error('[LogMeal] Submit failed:', err.response?.data ?? err.message);
@@ -101,8 +132,11 @@ export default function LogMealScreen() {
                 ? `${(item as any).food_type} · ${getCookingMethodLabel(lang, (item as any).method ?? 'raw')} · ${item.quantity_g}g${(item as any).bone_weight_g && (item as any).bone_weight_g > 0 ? ` · 🦴 ${(item as any).bone_weight_g}g` : ((item as any).with_bones ? ' · 🦴' : '')}`
                 : `${item.type} · ${item.quantity_g}g`;
               return (
-                <View key={idx} style={styles.pendingItem}>
-                  <Text style={styles.pendingLabel} numberOfLines={1}>{label}</Text>
+                <View key={idx} style={[styles.pendingItem, flagged[idx] && styles.pendingItemWarn]}>
+                  <View style={styles.pendingLabelRow}>
+                    {flagged[idx] && <Ionicons name="warning" size={16} color={Colors.error} />}
+                    <Text style={styles.pendingLabel} numberOfLines={1}>{label}</Text>
+                  </View>
                   <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
                     <Ionicons name="close-circle" size={20} color={Colors.error} />
                   </Pressable>
@@ -129,7 +163,7 @@ export default function LogMealScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('log.manualEntry')}</Text>
-          <ManualEntryForm onSubmit={addItem} />
+          <ManualEntryForm onSubmit={confirmAddItem} />
         </View>
 
         <Pressable
@@ -218,11 +252,22 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginBottom: 6,
   },
+  pendingItemWarn: {
+    backgroundColor: `${Colors.error}10`,
+    borderWidth: 1,
+    borderColor: `${Colors.error}40`,
+  },
+  pendingLabelRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginRight: 8,
+  },
   pendingLabel: {
     flex: 1,
     fontSize: FontSize.sm,
     color: Colors.textPrimary,
-    marginRight: 8,
   },
   previewRow: {
     flexDirection: 'row',

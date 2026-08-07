@@ -14,6 +14,7 @@ import { getMealTypeLabel, getGoalLabel, labelForOptionKey } from '../../constan
 import type { StringKey } from '../../constants/strings';
 import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
 import { FOODS_DB, RECIPES_DB, RESTAURANT_DB, calculateItemMacros, recommendApi } from '../../services/api';
+import { resolveLogItemKeywords, findAllergenMatches } from '../../services/allergenService';
 
 // ─── Mascot Image Map (root-level high-res for header) ───────────────────────
 const MASCOT_IMAGES = {
@@ -643,9 +644,16 @@ export default function ChatScreen() {
             bone_weight_g: it.bone_weight_g,
           }));
 
-          // Log via context
+// Log via context
           await logMeal(parsed.meal_type, itemsToLog);
-          
+
+          // Allergen check across logged items — surface a reminder in the reply
+          const matchedAllergens = new Set<string>();
+          for (const it of itemsToLog) {
+            const kw = await resolveLogItemKeywords(it);
+            findAllergenMatches(user, kw).forEach((a) => matchedAllergens.add(a));
+          }
+
           let totalCal = 0, totalP = 0, totalC = 0, totalF = 0;
           let summaryText = '';
 
@@ -672,9 +680,17 @@ export default function ChatScreen() {
             f: Math.round(totalF),
           });
           const closer = totalP > 20 ? t('chat.greatProtein') : t('chat.loggedKeepGoing');
-          coachResponseText = `${t('chat.logSuccess', { mealType: getMealTypeLabel(lang, parsed.meal_type) })}\n\n${summaryText}\n${totalsText}\n\n${closer}`;
-          nextMascot = totalP > 20 ? 'flex' : (isLate ? 'sleeppp' : 'streak');
-          nextStatus = totalP > 20 ? 'chat.statusPump' : (isLate ? 'chat.statusBedtime' : 'chat.statusStreak');
+
+          if (matchedAllergens.size > 0) {
+            const labels = Array.from(matchedAllergens).map((a) => labelForOptionKey(lang, a)).join(', ');
+            coachResponseText = `⚠️ **${t('chat.allergenLoggedTitle')}**\n${t('chat.allergenLoggedBody', { allergens: labels })}\n\n${summaryText}\n${totalsText}`;
+            nextMascot = isLate ? 'sleeppp' : 'worry';
+            nextStatus = isLate ? 'chat.statusSleepy' : 'chat.statusWorried';
+          } else {
+            coachResponseText = `${t('chat.logSuccess', { mealType: getMealTypeLabel(lang, parsed.meal_type) })}\n\n${summaryText}\n${totalsText}\n\n${closer}`;
+            nextMascot = totalP > 20 ? 'flex' : (isLate ? 'sleeppp' : 'streak');
+            nextStatus = totalP > 20 ? 'chat.statusPump' : (isLate ? 'chat.statusBedtime' : 'chat.statusStreak');
+          }
         } catch (err: any) {
           coachResponseText = t('chat.logFailed', { error: err.message || t('common.unknown') });
           nextMascot = 'worry';
@@ -730,6 +746,9 @@ export default function ChatScreen() {
 
     setOcrModalVisible(false);
 
+    const ocrHour = new Date().getHours();
+    const isLate = ocrHour >= 22 || ocrHour < 5;
+
     // Send user message
     const userMsg: Message = { id: Math.random().toString(), sender: 'user', text: t('chat.scannedPrefix', { name: scannedName }), timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
@@ -746,21 +765,34 @@ export default function ChatScreen() {
         manual_macros: { calories: c, protein: p, carbs: cb, fat: f }
       }]);
 
+      const matched = findAllergenMatches(user, [scannedName]);
+
       setTimeout(() => {
+        let replyText = t('chat.scanLogged', {
+          name: scannedName,
+          mealType: getMealTypeLabel(lang, scannedMealType),
+          cal: c, p, c: cb, f,
+        });
+        let mascot: MascotState = p > 15 ? 'flex' : 'streak';
+        let status: StringKey = 'chat.statusScan';
+
+        if (matched.length > 0) {
+          const labels = matched.map((a) => labelForOptionKey(lang, a)).join(', ');
+          replyText = `⚠️ **${t('chat.allergenLoggedTitle')}**\n${t('chat.allergenLoggedBody', { allergens: labels })}\n\n${replyText}`;
+          mascot = isLate ? 'sleeppp' : 'worry';
+          status = isLate ? 'chat.statusSleepy' : 'chat.statusWorried';
+        }
+
         const coachMsg: Message = {
           id: Math.random().toString(),
           sender: 'coach',
-          text: t('chat.scanLogged', {
-            name: scannedName,
-            mealType: getMealTypeLabel(lang, scannedMealType),
-            cal: c, p, c: cb, f,
-          }),
+          text: replyText,
           timestamp: new Date(),
-          mascotState: p > 15 ? 'flex' : 'streak',
+          mascotState: mascot,
         };
         setMessages((prev) => [...prev, coachMsg]);
         setIsTyping(false);
-        changeMascotState(p > 15 ? 'flex' : 'streak', 'chat.statusScan');
+        changeMascotState(mascot, status);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       }, 1500);
 
