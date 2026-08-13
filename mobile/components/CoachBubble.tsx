@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import TypewriterText from './TypewriterText';
@@ -19,9 +19,23 @@ export default function CoachBubble({
   onTypeComplete,
 }: CoachBubbleProps) {
   const typewriterRef = useRef<TypewriterTextHandle>(null);
+  const [isTyping, setIsTyping] = useState(typewriter);
+
+  useEffect(() => {
+    setIsTyping(typewriter);
+  }, [message, typewriter]);
+
+  const handleComplete = () => {
+    setIsTyping(false);
+    onTypeComplete?.();
+  };
 
   return (
-    <View style={styles.container}>
+    <Pressable
+      style={[styles.container, isTyping && { minHeight: 600 }]}
+      onPress={() => isTyping && typewriterRef.current?.skip()}
+      accessible={false}
+    >
       <View style={styles.mascotStage}>
         <View style={styles.backdropAngle} />
         <Image
@@ -32,20 +46,23 @@ export default function CoachBubble({
           cachePolicy="memory-disk"
         />
       </View>
-      <Pressable onPress={() => typewriterRef.current?.skip()} style={styles.textWrap}>
+      <View style={styles.textWrap}>
         {typewriter ? (
           <TypewriterText
             ref={typewriterRef}
             text={message}
             speed={typewriterSpeed}
             style={styles.questionText}
-            onComplete={onTypeComplete}
+            onComplete={handleComplete}
           />
         ) : (
           <Text style={styles.questionText}>{message}</Text>
         )}
-      </Pressable>
-    </View>
+        {isTyping && (
+          <Text style={styles.tapToSkipText}>Tap anywhere to skip</Text>
+        )}
+      </View>
+    </Pressable>
   );
 }
 
@@ -86,5 +103,11 @@ const styles = StyleSheet.create({
     color: '#111827',
     lineHeight: 30,
     letterSpacing: -0.4,
+  },
+  tapToSkipText: {
+    fontSize: FontSize.sm,
+    color: '#9CA3AF',
+    marginTop: Spacing.sm,
+    fontStyle: 'italic',
   },
 });

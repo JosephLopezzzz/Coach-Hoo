@@ -1,4 +1,4 @@
-// ─── Coach Hoo Design System ──────────────────────────────────────────────────
+// ─── Nokma Design System ──────────────────────────────────────────────────
 
 export const Colors = {
   // Backgrounds
@@ -8,9 +8,9 @@ export const Colors = {
   bgInput:      '#FFFFFF',  // white input fields
 
   // Primary brand
-  primary:      '#E8A254',  // golden yellow
-  primaryDim:   '#D08B3E',
-  primaryGlow:  'rgba(232, 162, 84, 0.12)',
+  primary:      '#D94A1E',  // warm red-orange
+  primaryDim:   '#B83912',
+  primaryGlow:  'rgba(217, 74, 30, 0.12)',
 
   // Accent
   accent:       '#7CB7A5',  // soft mint/teal

@@ -1,4 +1,4 @@
-// ─── Coach Hoo string table ───────────────────────────────────────────────────
+// ─── Nokma string table ───────────────────────────────────────────────────
 // Every user-facing string lives here, keyed by a stable ID. Add new strings as
 // [english, filipino] pairs — the second slot is required so a missing
 // translation is a type error rather than a silent English fallback at runtime.
@@ -80,7 +80,7 @@ export const STRINGS = {
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
   'tab.dashboard': ['Dashboard', 'Dashboard'],
-  'tab.coach':     ['Coach Hoo', 'Coach Hoo'],
+  'tab.coach':     ['Nokma', 'Nokma'],
   'tab.search':    ['Search', 'Maghanap'],
   'tab.log':       ['Log Meal', 'Mag-log'],
   'tab.profile':   ['Profile', 'Profile'],
@@ -100,8 +100,8 @@ export const STRINGS = {
   'onboarding.goToDashboard':   ['Go to Dashboard', 'Pumunta sa Dashboard'],
 
   'onboarding.welcome': [
-    "Hi! I'm Coach Hoo, your coach for tracking meals, calories, and healthy habits. What should I call you?",
-    'Kumusta! Ako si Coach Hoo, ang iyong coach para sa pag-track ng pagkain, calories, at malusog na gawi. Ano ang gusto mong itawag ko sa iyo?',
+    "Hi! I'm Nokma, your coach for tracking meals, calories, and healthy habits. What should I call you?",
+    'Kumusta! Ako si Nokma, ang iyong coach para sa pag-track ng pagkain, calories, at malusog na gawi. Ano ang gusto mong itawag ko sa iyo?',
   ],
   'onboarding.age': [
     'Nice to meet you, {name}! How old are you?',
@@ -142,8 +142,8 @@ export const STRINGS = {
     'Aling kondisyon ang naaangkop sa iyo?',
   ],
   'onboarding.healthSafety': [
-    'Coach Hoo can support general tracking. For condition-specific food, calorie, medication, or activity advice, please follow guidance from your doctor or registered dietitian.',
-    'Ang Coach Hoo ay maaaring sumuporta sa general tracking. Para sa payo tungkol sa partikular na kondisyon — pagkain, calorie, gamot, o aktibidad — mangyaring sumunod sa gabay ng iyong doktor o rehistradong dietitian.',
+    'Nokma can support general tracking. For condition-specific food, calorie, medication, or activity advice, please follow guidance from your doctor or registered dietitian.',
+    'Ang Nokma ay maaaring sumuporta sa general tracking. Para sa payo tungkol sa partikular na kondisyon — pagkain, calorie, gamot, o aktibidad — mangyaring sumunod sa gabay ng iyong doktor o rehistradong dietitian.',
   ],
   'onboarding.searchConditions': ['Search conditions...', 'Maghanap ng kondisyon...'],
 
@@ -250,8 +250,8 @@ export const STRINGS = {
   'dash.goodAfternoon': ['Good afternoon!', 'Magandang hapon!'],
   'dash.goodEvening':   ['Good evening!', 'Magandang gabi!'],
   'dash.emptyMeals': [
-    "Coach Hoo hasn't seen any meals yet today. Time to log your first one!",
-    'Wala pang nakikitang pagkain si Coach Hoo ngayong araw. Oras na para mag-log ng una mo!',
+    "Nokma hasn't seen any meals yet today. Time to log your first one!",
+    'Wala pang nakikitang pagkain si Nokma ngayong araw. Oras na para mag-log ng una mo!',
   ],
   'dash.logged': ['Logged! Keep up the great tracking!', 'Na-log! Ipagpatuloy ang magandang pag-track!'],
 
@@ -275,12 +275,12 @@ export const STRINGS = {
     'Gumagabi na! Magaling ang ginawa mo ngayong araw. Oras na para magpahinga.',
   ],
   'coach.welcome': [
-    "Welcome to Coach Hoo! Tap the + to log your first meal — I'll help track your progress!",
-    'Maligayang pagdating sa Coach Hoo! I-tap ang + para i-log ang unang pagkain mo — tutulungan kitang i-track ang progress mo!',
+    "Welcome to Nokma! Tap the + to log your first meal — I'll help track your progress!",
+    'Maligayang pagdating sa Nokma! I-tap ang + para i-log ang unang pagkain mo — tutulungan kitang i-track ang progress mo!',
   ],
   'coach.celebration': [
-    'Nailed it! All macros hit today. Coach Hoo is proud of you!',
-    'Nagawa mo! Kumpleto ang macros ngayong araw. Proud sa iyo si Coach Hoo!',
+    'Nailed it! All macros hit today. Nokma is proud of you!',
+    'Nagawa mo! Kumpleto ang macros ngayong araw. Proud sa iyo si Nokma!',
   ],
   'coach.almostThere':      ['Almost there! {remainder}. You\'ve got this!', 'Malapit na! {remainder}. Kaya mo yan!'],
   'coach.proteinToGo':      ['{grams}g protein to go', '{grams}g protina na lang'],
@@ -301,7 +301,7 @@ export const STRINGS = {
   ],
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
-  'tutorial.welcome.title': ['Welcome to Coach Hoo!', 'Maligayang pagdating sa Coach Hoo!'],
+  'tutorial.welcome.title': ['Welcome to Nokma!', 'Maligayang pagdating sa Nokma!'],
   'tutorial.welcome.body': [
     "Hi {name}! I'm your guide through this app. Let me show you around so you can start tracking your nutrition with confidence.",
     'Kumusta {name}! Ako ang iyong gabay sa app na ito. Ipapakita ko sa iyo ang paligid para makapagsimula kang mag-track nang may kumpiyansa.',
@@ -316,7 +316,7 @@ export const STRINGS = {
     'Your calorie tracker and macro bars show how close you are to your daily targets. The fuller they are, the better!',
     'Ipinapakita ng iyong calorie tracker at macro bars kung gaano ka na kalapit sa iyong pang-araw-araw na target. Mas puno, mas maganda!',
   ],
-  'tutorial.coach.title': ['Coach Hoo Responds', 'Sumasagot si Coach Hoo'],
+  'tutorial.coach.title': ['Nokma Responds', 'Sumasagot si Nokma'],
   'tutorial.coach.body': [
     'I read your activity and give you tailored feedback, encouragement, and tips to keep you on track.',
     'Binabasa ko ang iyong aktibidad at nagbibigay ng angkop na feedback, paghihikayat, at tips para manatili kang nasa tamang landas.',
@@ -437,8 +437,8 @@ export const STRINGS = {
   'profile.activity':       ['Activity', 'Aktibidad'],
   'profile.language':       ['Language', 'Wika'],
   'profile.languageHint': [
-    'Coach Hoo will speak to you in this language.',
-    'Sa wikang ito magsasalita si Coach Hoo sa iyo.',
+    'Nokma will speak to you in this language.',
+    'Sa wikang ito magsasalita si Nokma sa iyo.',
   ],
   'activity.1': ['Sedentary', 'Halos hindi gumagalaw'],
   'activity.2': ['Lightly Active', 'Bahagyang aktibo'],
@@ -450,8 +450,8 @@ export const STRINGS = {
   'profile.replayTutorial': ['Replay Tutorial', 'Ulitin ang Tutorial'],
   'profile.tutorialReset':  ['Tutorial Reset', 'Na-reset ang Tutorial'],
   'profile.tutorialResetBody': [
-    'The Coach Hoo tutorial will appear again on your next dashboard visit.',
-    'Lilitaw muli ang tutorial ni Coach Hoo sa susunod mong pagbisita sa dashboard.',
+    'The Nokma tutorial will appear again on your next dashboard visit.',
+    'Lilitaw muli ang tutorial ni Nokma sa susunod mong pagbisita sa dashboard.',
   ],
   'profile.resetProgress':     ['Reset All Progress', 'I-reset ang Lahat ng Progreso'],
   'profile.resetTitle':        ['Reset Progress', 'I-reset ang Progreso'],
@@ -468,12 +468,12 @@ export const STRINGS = {
   'profile.removePhoto':       ['Remove Photo', 'Alisin ang Larawan'],
   'profile.choosePhoto':       ['Choose New Photo', 'Pumili ng Bagong Larawan'],
   'profile.photoPermission': [
-    'Coach Hoo needs access to your photos to change your profile picture.',
-    'Kailangan ni Coach Hoo ng access sa iyong mga larawan para mapalitan ang profile picture mo.',
+    'Nokma needs access to your photos to change your profile picture.',
+    'Kailangan ni Nokma ng access sa iyong mga larawan para mapalitan ang profile picture mo.',
   ],
   'profile.photoFailed':  ['Failed to pick image from library.', 'Nabigong pumili ng larawan mula sa library.'],
-  'profile.defaultName':  ['Coach Hoo User', 'Coach Hoo User'],
-  'profile.version':      ['Coach Hoo v1.0.0 · Built for 🇵🇭', 'Coach Hoo v1.0.0 · Ginawa para sa 🇵🇭'],
+  'profile.defaultName':  ['Nokma User', 'Nokma User'],
+  'profile.version':      ['Nokma v1.0.0 · Built for 🇵🇭', 'Nokma v1.0.0 · Ginawa para sa 🇵🇭'],
   'profile.bmi':          ['BMI', 'BMI'],
   'profile.bmiUnderweight':['Underweight', 'Kulang sa timbang'],
   'profile.bmiNormal':     ['Normal', 'Normal'],
@@ -482,7 +482,7 @@ export const STRINGS = {
 
   // ── Chat ───────────────────────────────────────────────────────────────────
   'chat.inputPlaceholder': ['Chat or type what you ate to log...', 'Mag-chat o i-type ang kinain mo para i-log...'],
-  'chat.writing':          ['Coach Hoo is writing...', 'Nagsusulat si Coach Hoo...'],
+  'chat.writing':          ['Nokma is writing...', 'Nagsusulat si Nokma...'],
   'chat.statusMotivated':  ['Feeling motivated!', 'Motivated ako!'],
   'chat.statusSleepy':     ['Getting sleepy... Zzz', 'Inaantok na... Zzz'],
   'chat.statusReady':      ['Ready to help!', 'Handang tumulong!'],
@@ -509,8 +509,8 @@ export const STRINGS = {
   'chat.statusScan':       ['Logged scan!', 'Na-log ang scan!'],
 
   'chat.welcome': [
-    "Cluck cluck! Hello {name}! I'm Coach Hoo, your personal macro-tracking chicken mascot! 🐔\n\nTell me what you ate (e.g. \"I ate 150g of roasted chicken\") and I'll parse it and log it for you. You can even specify bones, like \"chicken thigh with 20g bones\"!",
-    'Tuka tuka! Kumusta {name}! Ako si Coach Hoo, ang iyong personal na macro-tracking chicken mascot! 🐔\n\nSabihin mo kung ano ang kinain mo (hal. "Kumain ako ng 150g na inihaw na manok") at ipo-proseso ko at ilo-log ito para sa iyo. Pwede mo pang tukuyin ang buto, tulad ng "chicken thigh na may 20g buto"!',
+    "Cluck cluck! Hello {name}! I'm Nokma, your personal macro-tracking chicken mascot! 🐔\n\nTell me what you ate (e.g. \"I ate 150g of roasted chicken\") and I'll parse it and log it for you. You can even specify bones, like \"chicken thigh with 20g bones\"!",
+    'Tuka tuka! Kumusta {name}! Ako si Nokma, ang iyong personal na macro-tracking chicken mascot! 🐔\n\nSabihin mo kung ano ang kinain mo (hal. "Kumain ako ng 150g na inihaw na manok") at ipo-proseso ko at ilo-log ito para sa iyo. Pwede mo pang tukuyin ang buto, tulad ng "chicken thigh na may 20g buto"!',
   ],
   'chat.suggestion.logChicken':  ['Log 150g grilled chicken breast', 'I-log ang 150g inihaw na chicken breast'],
   'chat.suggestion.logRice':     ['Log 200g of rice for lunch', 'I-log ang 200g kanin para sa tanghalian'],
@@ -520,12 +520,12 @@ export const STRINGS = {
   'chat.suggestion.allergies':   ['What are my allergies?', 'Ano ang mga allergy ko?'],
 
   'chat.outOfDomain': [
-    'Cluck? Coach Hoo is here to help with your fitness journey! 🐔✨\n\nI can help you log foods, track your weight, display macro targets, or view today\'s progress.\n\nTry asking me:\n- "What is my weight?"\n- "How are my macros today?"\n- "Log 150g grilled chicken breast"\n- "Show my profile details"',
-    'Tuka? Nandito si Coach Hoo para tumulong sa iyong fitness journey! 🐔✨\n\nKaya kitang tulungan mag-log ng pagkain, mag-track ng timbang, magpakita ng macro target, o tingnan ang progreso ngayong araw.\n\nSubukan mong itanong:\n- "Ano ang timbang ko?"\n- "Kumusta ang macros ko ngayon?"\n- "I-log ang 150g inihaw na chicken breast"\n- "Ipakita ang detalye ng profile ko"',
+    'Cluck? Nokma is here to help with your fitness journey! 🐔✨\n\nI can help you log foods, track your weight, display macro targets, or view today\'s progress.\n\nTry asking me:\n- "What is my weight?"\n- "How are my macros today?"\n- "Log 150g grilled chicken breast"\n- "Show my profile details"',
+    'Tuka? Nandito si Nokma para tumulong sa iyong fitness journey! 🐔✨\n\nKaya kitang tulungan mag-log ng pagkain, mag-track ng timbang, magpakita ng macro target, o tingnan ang progreso ngayong araw.\n\nSubukan mong itanong:\n- "Ano ang timbang ko?"\n- "Kumusta ang macros ko ngayon?"\n- "I-log ang 150g inihaw na chicken breast"\n- "Ipakita ang detalye ng profile ko"',
   ],
   'chat.greetingReply': [
-    'Cluck cluck! Good {timeOfDay}, {name}! 🐔✨\n\nCoach Hoo is feeling motivated and ready to help you track your progress. Let me know what you\'d like to check or log today!',
-    'Tuka tuka! Magandang {timeOfDay}, {name}! 🐔✨\n\nMotivated si Coach Hoo at handang tumulong sa pag-track ng progreso mo. Sabihin mo kung ano ang gusto mong tingnan o i-log ngayon!',
+    'Cluck cluck! Good {timeOfDay}, {name}! 🐔✨\n\nNokma is feeling motivated and ready to help you track your progress. Let me know what you\'d like to check or log today!',
+    'Tuka tuka! Magandang {timeOfDay}, {name}! 🐔✨\n\nMotivated si Nokma at handang tumulong sa pag-track ng progreso mo. Sabihin mo kung ano ang gusto mong tingnan o i-log ngayon!',
   ],
   'chat.timeMorning':   ['morning', 'umaga'],
   'chat.timeAfternoon': ['afternoon', 'hapon'],
@@ -539,8 +539,8 @@ export const STRINGS = {
     'Tuka! Wala pa akong nakikitang timbang sa profile mo. Pwede mong itakda ang timbang mo sa Profile tab! 🐔',
   ],
   'chat.profileReply': [
-    'Bawk! Here is what Coach Hoo knows about your profile: 🐔\n\n👤 **Name**: {name}\n🎂 **Age**: {age}\n📏 **Height**: {height} cm\n⚖️ **Weight**: {weight} kg\n🎯 **Goal**: {goal}\n🌍 **Country**: {country}\n🏥 **Health Condition**: {condition}\n🚫 **Allergies**: {allergies}\n\nNeed to make changes? Head over to the Profile tab! ✨',
-    'Tuka! Ito ang alam ni Coach Hoo tungkol sa profile mo: 🐔\n\n👤 **Pangalan**: {name}\n🎂 **Edad**: {age}\n📏 **Taas**: {height} cm\n⚖️ **Timbang**: {weight} kg\n🎯 **Goal**: {goal}\n🌍 **Bansa**: {country}\n🏥 **Kondisyong Pangkalusugan**: {condition}\n🚫 **Mga Allergy**: {allergies}\n\nGusto mong magbago? Pumunta sa Profile tab! ✨',
+    'Bawk! Here is what Nokma knows about your profile: 🐔\n\n👤 **Name**: {name}\n🎂 **Age**: {age}\n📏 **Height**: {height} cm\n⚖️ **Weight**: {weight} kg\n🎯 **Goal**: {goal}\n🌍 **Country**: {country}\n🏥 **Health Condition**: {condition}\n🚫 **Allergies**: {allergies}\n\nNeed to make changes? Head over to the Profile tab! ✨',
+    'Tuka! Ito ang alam ni Nokma tungkol sa profile mo: 🐔\n\n👤 **Pangalan**: {name}\n🎂 **Edad**: {age}\n📏 **Taas**: {height} cm\n⚖️ **Timbang**: {weight} kg\n🎯 **Goal**: {goal}\n🌍 **Bansa**: {country}\n🏥 **Kondisyong Pangkalusugan**: {condition}\n🚫 **Mga Allergy**: {allergies}\n\nGusto mong magbago? Pumunta sa Profile tab! ✨',
   ],
   'chat.noMeals': [
     'Cluck! You haven\'t logged any meals today yet. 🐔\n\nTell me what you ate (e.g., "Log 150g grilled chicken breast") and I\'ll list it here!',
@@ -550,25 +550,25 @@ export const STRINGS = {
   'chat.mealAtTime':   ['{mealType} (at {time}):', '{mealType} (noong {time}):'],
   'chat.minusBones':   [', minus {grams}g bones', ', bawas {grams}g buto'],
   'chat.missingGrams': [
-    "Cluck? Coach Hoo noticed you mentioned **{food}**, but I didn't see the quantity in grams! 🥺\n\nCould you specify the weight in grams? For example:\n- \"Log 150g {food}\"\n- \"I ate 200g of {food} for lunch\"",
-    'Tuka? Napansin ni Coach Hoo na binanggit mo ang **{food}**, pero wala akong nakitang dami sa gramo! 🥺\n\nPwede mo bang tukuyin ang bigat sa gramo? Halimbawa:\n- "I-log ang 150g {food}"\n- "Kumain ako ng 200g na {food} para sa tanghalian"',
+    "Cluck? Nokma noticed you mentioned **{food}**, but I didn't see the quantity in grams! 🥺\n\nCould you specify the weight in grams? For example:\n- \"Log 150g {food}\"\n- \"I ate 200g of {food} for lunch\"",
+    'Tuka? Napansin ni Nokma na binanggit mo ang **{food}**, pero wala akong nakitang dami sa gramo! 🥺\n\nPwede mo bang tukuyin ang bigat sa gramo? Halimbawa:\n- "I-log ang 150g {food}"\n- "Kumain ako ng 200g na {food} para sa tanghalian"',
   ],
   'chat.reportHeader': ['Here is your Daily Macro Report, cluck! 🐔', 'Narito ang iyong Daily Macro Report, tuka! 🐔'],
   'chat.reportBody': [
     '🔥 **Calories**: {cal} / {calTarget} kcal (Remaining: {calRem} kcal)\n🍗 **Protein**: {p}g / {pTarget}g\n🌾 **Carbs**: {c}g / {cTarget}g\n🥑 **Fat**: {f}g / {fTarget}g',
     '🔥 **Calories**: {cal} / {calTarget} kcal (Natitira: {calRem} kcal)\n🍗 **Protina**: {p}g / {pTarget}g\n🌾 **Carbs**: {c}g / {cTarget}g\n🥑 **Taba**: {f}g / {fTarget}g',
   ],
-  'chat.proteinHit':    ['Bawk bawk! You hit your protein goal! Coach Hoo is flexing! 🐔💪', 'Tuka tuka! Naabot mo ang protein goal mo! Nagpapa-flex si Coach Hoo! 🐔💪'],
+  'chat.proteinHit':    ['Bawk bawk! You hit your protein goal! Nokma is flexing! 🐔💪', 'Tuka tuka! Naabot mo ang protein goal mo! Nagpapa-flex si Nokma! 🐔💪'],
   'chat.proteinNeeded': ['Peck at that protein! You still need {grams}g more!', 'Tukain ang protina! Kailangan mo pa ng {grams}g!'],
   'chat.mealMoved':     ["Bawk! I've moved your last meal to **{mealType}**! 🐔✅", 'Tuka! Inilipat ko ang huli mong pagkain sa **{mealType}**! 🐔✅'],
   'chat.noMealsToEdit': ["Cluck? I don't see any meals logged today to change! 🐔", 'Tuka? Wala akong nakikitang na-log na pagkain ngayong araw na mababago! 🐔'],
   'chat.allergyReply': [
-    'Cluck! Here is your health summary, {name}! 🐔🏥\n\n🏥 **Health Condition**: {condition}\n\n🚫 **Registered Allergies**:\n{allergies}\n\nCoach Hoo always filters your allergens out of meal recommendations! You can update these in the Profile tab.',
-    'Tuka! Narito ang buod ng iyong kalusugan, {name}! 🐔🏥\n\n🏥 **Kondisyong Pangkalusugan**: {condition}\n\n🚫 **Mga Nakarehistrong Allergy**:\n{allergies}\n\nPalaging inaalis ni Coach Hoo ang iyong mga allergen sa mga meal recommendation! Pwede mong i-update ito sa Profile tab.',
+    'Cluck! Here is your health summary, {name}! 🐔🏥\n\n🏥 **Health Condition**: {condition}\n\n🚫 **Registered Allergies**:\n{allergies}\n\nNokma always filters your allergens out of meal recommendations! You can update these in the Profile tab.',
+    'Tuka! Narito ang buod ng iyong kalusugan, {name}! 🐔🏥\n\n🏥 **Kondisyong Pangkalusugan**: {condition}\n\n🚫 **Mga Nakarehistrong Allergy**:\n{allergies}\n\nPalaging inaalis ni Nokma ang iyong mga allergen sa mga meal recommendation! Pwede mong i-update ito sa Profile tab.',
   ],
   'chat.generalTips': [
-    'Cluck cluck! Coach Hoo is here! 🐔\n\n💡 **Hoo\'s Fitness Tips**:\n1. Hit your protein targets (aim for 2.0g per kg of body weight).\n2. If you weigh food with bones, type "with 20g bones" to subtract bone weight!\n3. Cooked methods change macros: fried food has added fats compared to boiled.\n\nTry telling me: "Log 150g boiled chicken breast for dinner"!',
-    'Tuka tuka! Nandito si Coach Hoo! 🐔\n\n💡 **Mga Fitness Tips ni Hoo**:\n1. Abutin ang iyong protein target (layunin ang 2.0g kada kg ng timbang).\n2. Kung may buto ang tinitimbang mong pagkain, i-type ang "may 20g buto" para ibawas ang bigat ng buto!\n3. Nagbabago ang macros depende sa pagluluto: mas mataas ang taba ng pinirito kaysa nilaga.\n\nSubukan mong sabihin: "I-log ang 150g nilagang chicken breast para sa hapunan"!',
+    'Cluck cluck! Nokma is here! 🐔\n\n💡 **Hoo\'s Fitness Tips**:\n1. Hit your protein targets (aim for 2.0g per kg of body weight).\n2. If you weigh food with bones, type "with 20g bones" to subtract bone weight!\n3. Cooked methods change macros: fried food has added fats compared to boiled.\n\nTry telling me: "Log 150g boiled chicken breast for dinner"!',
+    'Tuka tuka! Nandito si Nokma! 🐔\n\n💡 **Mga Fitness Tips ni Hoo**:\n1. Abutin ang iyong protein target (layunin ang 2.0g kada kg ng timbang).\n2. Kung may buto ang tinitimbang mong pagkain, i-type ang "may 20g buto" para ibawas ang bigat ng buto!\n3. Nagbabago ang macros depende sa pagluluto: mas mataas ang taba ng pinirito kaysa nilaga.\n\nSubukan mong sabihin: "I-log ang 150g nilagang chicken breast para sa hapunan"!',
   ],
   'chat.logSuccess': [
     'Bawk! Successfully logged for your **{mealType}**! 🐔🎉',
@@ -580,7 +580,7 @@ export const STRINGS = {
     '🔥 **Total Calories**: {cal} kcal\n💪 **Total Protein**: {p}g\n🌾 **Total Carbs**: {c}g\n🥑 **Total Fat**: {f}g',
     '🔥 **Kabuuang Calories**: {cal} kcal\n💪 **Kabuuang Protina**: {p}g\n🌾 **Kabuuang Carbs**: {c}g\n🥑 **Kabuuang Taba**: {f}g',
   ],
-  'chat.greatProtein': ['Cock-a-doodle-doo! Amazing protein source! Coach Hoo is flexing! 🐔💪', 'Tik-ti-la-ok! Napakagandang protein source! Nagpapa-flex si Coach Hoo! 🐔💪'],
+  'chat.greatProtein': ['Cock-a-doodle-doo! Amazing protein source! Nokma is flexing! 🐔💪', 'Tik-ti-la-ok! Napakagandang protein source! Nagpapa-flex si Nokma! 🐔💪'],
   'chat.loggedKeepGoing': ['Logged! Keep checking your macros!', 'Na-log! Ipagpatuloy ang pagbantay sa macros mo!'],
   'chat.logFailed': [
     'Cluck... I failed to log those items. Error: {error}. Try entering them manually in the Log Meal screen!',

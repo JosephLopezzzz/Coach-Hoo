@@ -44,12 +44,7 @@ export default React.memo(CoachGuide);
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: '#EEDECB',
+    alignItems: 'center',
     gap: 12,
   },
   mascotFrame: {

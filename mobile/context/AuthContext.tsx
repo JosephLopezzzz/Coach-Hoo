@@ -3,6 +3,7 @@ import React, {
 } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY } from '../services/coachMessageService';
 import type { User } from '../types';
 
@@ -19,6 +20,30 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const USER_STORAGE_KEY = 'coach_hoo_user_data';
 
+const setStorageItem = async (key: string, value: string) => {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
+
+const getStorageItem = async (key: string) => {
+  if (Platform.OS === 'web') {
+    return await AsyncStorage.getItem(key);
+  } else {
+    return await SecureStore.getItemAsync(key);
+  }
+};
+
+const deleteStorageItem = async (key: string) => {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const storedUser = await SecureStore.getItemAsync(USER_STORAGE_KEY);
+        const storedUser = await getStorageItem(USER_STORAGE_KEY);
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
@@ -48,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...userData,
     } as User;
 
-    await SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(newUser));
+    await setStorageItem(USER_STORAGE_KEY, JSON.stringify(newUser));
     setUser(newUser);
   }, []);
 
@@ -57,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => {
       if (!prev) return null;
       const next = { ...prev, ...updated };
-      SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(next));
+      setStorageItem(USER_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -67,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // next run starts on the language picker instead of silently reusing the old
   // choice while showing a fresh onboarding flow.
   const resetUser = useCallback(async () => {
-    await SecureStore.deleteItemAsync(USER_STORAGE_KEY);
+    await deleteStorageItem(USER_STORAGE_KEY);
     try {
       await AsyncStorage.multiRemove([LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY]);
     } catch (e) {

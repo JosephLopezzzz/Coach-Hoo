@@ -157,11 +157,17 @@ export default function DashboardScreen() {
   });
 
   return (
-    <>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.root}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.md }]}
+    <View style={styles.root}>
+      {/* Absolute Background Gradient */}
+      <ExpoImage
+        source={require('../../assets/dashboard_bg.jpeg')}
+        style={styles.bgImage}
+        contentFit="cover"
+      />
+
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -171,152 +177,154 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — date above greeting */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.date}>{today}</Text>
-            <Text style={styles.greeting}>{coach.greeting}</Text>
-          </View>
-          <View ref={fabRef}>
-            <Pressable style={styles.fab} onPress={() => router.push('/(tabs)/log')}>
-              <Ionicons name="add" size={24} color={Colors.textInverse} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Coach Guide — mascot + speech bubble */}
-        <View ref={coachRef}>
-          <Animated.View
-            style={{
-            opacity: coachCardAnim,
-            transform: [
-              {
-                translateY: coachCardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-20, 0],
-                }),
-              },
-            ],
-          }}
-        >
-          <CoachGuide message={displayMessage} visible />
-        </Animated.View>
-        </View>
-
-        {/* Calorie Ring + Macro bars */}
-        <View ref={trackerRef}>
-        <View style={styles.ringCard}>
-          <CalorieRing consumed={totals.calories} target={caloriesTarget} />
-        </View>
-
-        {/* Slim macro trio bars */}
-        <View style={styles.macroTrio}>
-          <View style={styles.slimMacroRow}>
-            <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
-              <View
-                style={[
-                  styles.slimFill,
-                  {
-                    width: `${Math.min((totals.protein / Math.max(proteinTarget, 1)) * 100, 100)}%`,
-                    backgroundColor: Colors.protein,
-                  },
-                ]}
-              />
+        {/* Transparent Header Section */}
+        <View style={[styles.headerWrapper, { paddingTop: insets.top + Spacing.lg }]}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.date}>{today}</Text>
+              <Text style={styles.greeting}>{coach.greeting}</Text>
             </View>
-            <Text style={styles.slimLabel}>
-              {t('macro.protein')}{' '}
-              <Text style={styles.slimVal}>
-                {Math.round(totals.protein)}/{proteinTarget}g
-              </Text>
-            </Text>
           </View>
-          <View style={styles.slimMacroRow}>
-            <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
-              <View
-                style={[
-                  styles.slimFill,
-                  {
-                    width: `${Math.min((totals.carbs / Math.max(carbsTarget, 1)) * 100, 100)}%`,
-                    backgroundColor: Colors.carbs,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.slimLabel}>
-              {t('macro.carbs')}{' '}
-              <Text style={styles.slimVal}>
-                {Math.round(totals.carbs)}/{carbsTarget}g
-              </Text>
-            </Text>
-          </View>
-          <View style={styles.slimMacroRow}>
-            <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
-              <View
-                style={[
-                  styles.slimFill,
-                  {
-                    width: `${Math.min((totals.fat / Math.max(fatTarget, 1)) * 100, 100)}%`,
-                    backgroundColor: Colors.fat,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.slimLabel}>
-              {t('macro.fat')}{' '}
-              <Text style={styles.slimVal}>
-                {Math.round(totals.fat)}/{fatTarget}g
-              </Text>
-            </Text>
-          </View>
-        </View>
-        </View>
 
-        {/* Today's meals */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('dash.todaysMeals')}</Text>
-            <Pressable
-              onPress={() => router.push('/(tabs)/log')}
-              style={styles.addMealBtn}
+          {/* Coach Guide — mascot + speech bubble */}
+          <View ref={coachRef}>
+            <Animated.View
+              style={{
+                opacity: coachCardAnim,
+                transform: [
+                  {
+                    translateY: coachCardAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
+              }}
             >
-              <Ionicons name="add" size={16} color={Colors.primary} />
-              <Text style={styles.addMealText}>{t('dash.add')}</Text>
-            </Pressable>
+              <CoachGuide message={displayMessage} visible />
+            </Animated.View>
+          </View>
+        </View>
+
+        {/* Layered White Content Card */}
+        <View style={styles.contentCard}>
+          {/* Calorie Ring + Macro bars */}
+          <View ref={trackerRef}>
+            <View style={styles.ringCard}>
+              <CalorieRing consumed={totals.calories} target={caloriesTarget} />
+            </View>
+
+            {/* Slim macro trio bars */}
+            <View style={styles.macroTrio}>
+              <View style={styles.slimMacroRow}>
+                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                  <View
+                    style={[
+                      styles.slimFill,
+                      {
+                        width: `${Math.min((totals.protein / Math.max(proteinTarget, 1)) * 100, 100)}%`,
+                        backgroundColor: Colors.protein,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.slimLabel}>
+                  {t('macro.protein')}{' '}
+                  <Text style={styles.slimVal}>
+                    {Math.round(totals.protein)}/{proteinTarget}g
+                  </Text>
+                </Text>
+              </View>
+              <View style={styles.slimMacroRow}>
+                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                  <View
+                    style={[
+                      styles.slimFill,
+                      {
+                        width: `${Math.min((totals.carbs / Math.max(carbsTarget, 1)) * 100, 100)}%`,
+                        backgroundColor: Colors.carbs,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.slimLabel}>
+                  {t('macro.carbs')}{' '}
+                  <Text style={styles.slimVal}>
+                    {Math.round(totals.carbs)}/{carbsTarget}g
+                  </Text>
+                </Text>
+              </View>
+              <View style={styles.slimMacroRow}>
+                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                  <View
+                    style={[
+                      styles.slimFill,
+                      {
+                        width: `${Math.min((totals.fat / Math.max(fatTarget, 1)) * 100, 100)}%`,
+                        backgroundColor: Colors.fat,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.slimLabel}>
+                  {t('macro.fat')}{' '}
+                  <Text style={styles.slimVal}>
+                    {Math.round(totals.fat)}/{fatTarget}g
+                  </Text>
+                </Text>
+              </View>
+            </View>
           </View>
 
-          {meals.length === 0 ? (
-            <View style={styles.emptyMeals}>
-              <ExpoImage
-                source={require('../../assets/mascot/idle.gif')}
-                style={styles.emptyMascot}
-                contentFit="contain"
-                priority="low"
-              />
-              <Text style={styles.emptyTitle}>
-                {new Date().getHours() < 12
-                  ? t('dash.goodMorning')
-                  : new Date().getHours() < 18
-                    ? t('dash.goodAfternoon')
-                    : t('dash.goodEvening')}
-              </Text>
-              <Text style={styles.emptySubText}>{t('dash.emptyMeals')}</Text>
-              <Pressable
-                style={styles.emptyCta}
-                onPress={() => router.push('/(tabs)/log')}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={18}
-                  color={Colors.textInverse}
-                />
-                <Text style={styles.emptyCtaText}>{t('dash.logAMeal')}</Text>
-              </Pressable>
+          {/* Today's meals */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('dash.todaysMeals')}</Text>
+              <View ref={fabRef}>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/log')}
+                  style={styles.addMealBtn}
+                >
+                  <Ionicons name="add" size={16} color={Colors.primary} />
+                  <Text style={styles.addMealText}>{t('dash.add')}</Text>
+                </Pressable>
+              </View>
             </View>
-          ) : (
-            meals.map((meal) => (
-              <MealSection key={meal.id} meal={meal} onDelete={deleteMeal} />
-            ))
-          )}
+
+            {meals.length === 0 ? (
+              <View style={styles.emptyMeals}>
+                <ExpoImage
+                  source={require('../../assets/mascot/idle.gif')}
+                  style={styles.emptyMascot}
+                  contentFit="contain"
+                  priority="low"
+                />
+                <Text style={styles.emptyTitle}>
+                  {new Date().getHours() < 12
+                    ? t('dash.goodMorning')
+                    : new Date().getHours() < 18
+                      ? t('dash.goodAfternoon')
+                      : t('dash.goodEvening')}
+                </Text>
+                <Text style={styles.emptySubText}>{t('dash.emptyMeals')}</Text>
+                <Pressable
+                  style={styles.emptyCta}
+                  onPress={() => router.push('/(tabs)/log')}
+                >
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={18}
+                    color={Colors.textInverse}
+                  />
+                  <Text style={styles.emptyCtaText}>{t('dash.logAMeal')}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              meals.map((meal) => (
+                <MealSection key={meal.id} meal={meal} onDelete={deleteMeal} />
+              ))
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -328,44 +336,61 @@ export default function DashboardScreen() {
         scrollViewRef={scrollRef}
         userName={user?.full_name}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
-  content: { padding: Spacing.lg, gap: Spacing.md },
+  root: { flex: 1, backgroundColor: '#FFFFFF' },
+  bgImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 480, // Covers upper portion, creating the sky/gradient look
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  headerWrapper: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: Spacing.xs,
   },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   date: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: '#374151',
     marginBottom: 2,
+    fontWeight: '500',
   },
   greeting: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.textPrimary,
-  },
-  fab: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: '#111827',
   },
   ringCard: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
+    backgroundColor: 'transparent',
+    padding: Spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
     gap: Spacing.md,
   },
   ringCenter: {
@@ -424,7 +449,9 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
-  section: {},
+  section: {
+    marginTop: Spacing.sm,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

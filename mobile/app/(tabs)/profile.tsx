@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Alert, ActivityIndicator, Image,
+  Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,7 +44,15 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [resetting, setResetting] = useState(false);
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${t('profile.resetTitle')}\n\n${t('profile.resetBody')}`)) {
+        setResetting(true);
+        await resetUser();
+      }
+      return;
+    }
+
     Alert.alert(t('profile.resetTitle'), t('profile.resetBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
@@ -252,7 +260,11 @@ export default function ProfileScreen() {
         style={styles.replayBtn}
         onPress={() => {
           resetTutorial();
-          Alert.alert(t('profile.tutorialReset'), t('profile.tutorialResetBody'));
+          if (Platform.OS === 'web') {
+            window.alert(t('profile.tutorialResetBody'));
+          } else {
+            Alert.alert(t('profile.tutorialReset'), t('profile.tutorialResetBody'));
+          }
         }}
       >
         <Ionicons name="help-circle-outline" size={20} color={Colors.primary} />

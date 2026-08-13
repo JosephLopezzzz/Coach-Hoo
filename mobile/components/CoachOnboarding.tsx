@@ -345,7 +345,7 @@ export default function CoachOnboarding() {
                     English
                   </Text>
                   {lang === 'english' && (
-                    <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                    <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                   )}
                 </Pressable>
                 <Pressable
@@ -359,7 +359,7 @@ export default function CoachOnboarding() {
                     Filipino
                   </Text>
                   {lang === 'filipino' && (
-                    <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                    <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                   )}
                 </Pressable>
               </View>
@@ -494,7 +494,7 @@ export default function CoachOnboarding() {
                       {getGoalLabel(lang, g)}
                     </Text>
                     {form.goal === g && (
-                      <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                      <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                     )}
                   </Pressable>
                 ))}
@@ -541,7 +541,7 @@ export default function CoachOnboarding() {
                         {a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                       </Text>
                       {form.healthAnswer === a && (
-                        <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                        <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                       )}
                     </Pressable>
                   ))}
@@ -611,7 +611,7 @@ export default function CoachOnboarding() {
                         {a === 'no' ? getNoLabel(lang) : a === 'yes' ? getYesLabel(lang) : getSkipLabel(lang)}
                       </Text>
                       {form.allergiesAnswer === a && (
-                        <Ionicons name="checkmark-circle" size={22} color="#D94A1E" />
+                        <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                       )}
                     </Pressable>
                   ))}
@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: FontSize.md, color: Colors.textSecondary, fontWeight: FontWeight.medium },
   dotsRow: { flexDirection: 'row', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D1D5DB' },
-  dotActive: { backgroundColor: '#D94A1E', width: 22, borderRadius: 4 },
+  dotActive: { backgroundColor: Colors.primary, width: 22, borderRadius: 4 },
 
   scroll: {
     padding: Spacing.lg,
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   unitOption: { paddingHorizontal: 12, paddingVertical: 14, backgroundColor: '#FFFFFF' },
-  unitOptionActive: { backgroundColor: '#D94A1E' },
+  unitOptionActive: { backgroundColor: Colors.primary },
   unitText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: '#4B5563' },
   unitTextActive: { color: '#FFFFFF' },
 
@@ -842,8 +842,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   optionCardActive: {
-    borderColor: '#D94A1E',
-    backgroundColor: '#FFF8F5',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryGlow,
   },
   optionCardText: {
     fontSize: FontSize.md,
@@ -851,13 +851,13 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   optionCardTextActive: {
-    color: '#D94A1E',
+    color: Colors.primary,
     fontWeight: FontWeight.bold,
   },
 
   primaryBtn: {
     alignSelf: 'stretch',
-    backgroundColor: '#D94A1E',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.md,
-    shadowColor: '#D94A1E',
+    shadowColor: Colors.primary,
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,

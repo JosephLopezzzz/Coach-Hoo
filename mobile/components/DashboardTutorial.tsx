@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,7 +17,7 @@ import { useLanguage } from '../context/LanguageContext';
 import type { StringKey } from '../constants/i18n';
 import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
 
-const TUTORIAL_KEY = 'coach_hoo_tutorial_complete';
+const TUTORIAL_KEY = 'nokma_tutorial_complete';
 
 export interface SpotlightRect {
   top: number;
@@ -54,13 +55,14 @@ function SpotlightCutout({
       <View
         style={{
           position: 'absolute',
-          top: rect.top - 2,
-          left: rect.left - 2,
-          width: rect.width + 4,
-          height: rect.height + 4,
-          borderRadius: rect.rx + 2,
-          borderWidth: 2.5,
-          borderColor: Colors.primary,
+          top: rect.top - 4,
+          left: rect.left - 4,
+          width: rect.width + 8,
+          height: rect.height + 8,
+          borderRadius: rect.rx + 4,
+          borderWidth: 2,
+          borderColor: '#FFFFFF',
+          borderStyle: 'dashed',
         }}
       />
     </View>
@@ -86,8 +88,8 @@ export default function DashboardTutorial({
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const slideAnim = useRef(new Animated.Value(-100)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const { width: screenW, height: screenH } = Dimensions.get('window');
 
   const name = userName?.split(' ')[0] || t('coach.friend');
@@ -96,7 +98,6 @@ export default function DashboardTutorial({
     titleKey: StringKey;
     messageKey: StringKey;
     getRef: () => React.RefObject<View | null> | null;
-    /** Scroll offset to bring the target into view before measuring. */
     scrollTo?: number;
   }[] = [
     {
@@ -108,13 +109,13 @@ export default function DashboardTutorial({
       titleKey: 'tutorial.log.title',
       messageKey: 'tutorial.log.body',
       getRef: () => targetRefs.fabRef,
-      scrollTo: 0,
+      scrollTo: 300,
     },
     {
       titleKey: 'tutorial.track.title',
       messageKey: 'tutorial.track.body',
       getRef: () => targetRefs.trackerRef,
-      scrollTo: 0,
+      scrollTo: 100,
     },
     {
       titleKey: 'tutorial.coach.title',
@@ -161,8 +162,6 @@ export default function DashboardTutorial({
       const ref = target?.getRef?.();
       if (!ref) return;
 
-      // Bring the target back into view first — measureInWindow reports
-      // off-screen coordinates if the user has scrolled away from it.
       if (target.scrollTo !== undefined && scrollViewRef?.current) {
         scrollViewRef.current.scrollTo({ y: target.scrollTo, animated: true });
         await new Promise((resolve) => setTimeout(resolve, 350));
@@ -187,24 +186,26 @@ export default function DashboardTutorial({
       setStep(0);
       setSpotlight(null);
       setShowConfetti(false);
-      slideAnim.setValue(-100);
       fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
     }
   }, [visible]);
 
   // Animate step transitions
   useEffect(() => {
     if (!visible) return;
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.9);
     Animated.parallel([
-      Animated.spring(slideAnim, {
-        toValue: 0,
+      Animated.spring(scaleAnim, {
+        toValue: 1,
         friction: 7,
         tension: 60,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }),
     ]).start();
@@ -231,17 +232,44 @@ export default function DashboardTutorial({
 
   if (!visible) return null;
 
+  // Calculate tooltip placement
+  const spaceAbove = spotlight ? spotlight.top : 0;
+  const spaceBelow = spotlight ? screenH - (spotlight.top + spotlight.height) : 0;
+  
+  // Prefer placing it where there is more space
+  const isTopPlacement = spotlight && spaceAbove > spaceBelow;
+  
+  const tooltipStyle: any = {
+    position: 'absolute',
+    left: Spacing.md,
+    right: Spacing.md,
+    opacity: fadeAnim,
+    transform: [{ scale: scaleAnim }],
+  };
+
+  if (spotlight) {
+    if (isTopPlacement) {
+      // Place ABOVE the spotlight
+      tooltipStyle.bottom = screenH - spotlight.top + Spacing.sm;
+    } else {
+      // Place BELOW the spotlight
+      tooltipStyle.top = spotlight.top + spotlight.height + Spacing.sm;
+    }
+  } else {
+    // Center it if there's no spotlight
+    tooltipStyle.top = screenH / 2 - 120;
+  }
+
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.root}>
-        {/* Spotlight overlay or full dim */}
         {spotlight ? (
           <SpotlightCutout rect={spotlight} screenW={screenW} screenH={screenH} />
         ) : (
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: 'rgba(47,62,70,0.65)' },
+              { backgroundColor: 'rgba(31, 41, 55, 0.75)' },
             ]}
             pointerEvents="none"
           />
@@ -249,40 +277,42 @@ export default function DashboardTutorial({
 
         <Confetti active={showConfetti} />
 
-        {/* Coach card at bottom */}
-        <Animated.View
-          style={[
-            styles.coachCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateX: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.coachRow}>
-            <View style={styles.mascotFrame}>
-              <Image
-                source={require('../assets/mascot/streak.png')}
-                style={styles.mascot}
-                contentFit="contain"
-              />
-            </View>
-            <View style={styles.textWrap}>
-              <Text style={styles.title}>{t(current.titleKey)}</Text>
-              <Text style={styles.message}>{t(current.messageKey, { name })}</Text>
-            </View>
+        {/* Floating Tooltip Card */}
+        <Animated.View style={[styles.coachCard, tooltipStyle]}>
+          
+          {/* Caret pointing to spotlight */}
+          {spotlight && isTopPlacement && (
+            <View style={[styles.caret, styles.caretBottom]} />
+          )}
+          {spotlight && !isTopPlacement && (
+            <View style={[styles.caret, styles.caretTop]} />
+          )}
+
+          {/* Large floating mascot */}
+          <View style={styles.mascotStage}>
+            <Image
+              source={require('../assets/mascot/idle.gif')}
+              style={styles.mascotLarge}
+              contentFit="contain"
+            />
           </View>
 
-          <View style={styles.dotsRow}>
-            {steps.map((_, i) => (
-              <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-            ))}
+          <View style={styles.contentWrap}>
+            <Text style={styles.title}>{t(current.titleKey)}</Text>
+            <Text style={styles.message}>{t(current.messageKey, { name })}</Text>
           </View>
 
-          <View style={styles.controls}>
+          <View style={styles.footer}>
             <Pressable onPress={handleSkip} style={styles.skipBtn}>
               <Text style={styles.skipText}>{t('common.skip')}</Text>
             </Pressable>
+
+            <View style={styles.dotsRow}>
+              {steps.map((_, i) => (
+                <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
+              ))}
+            </View>
+
             <View style={styles.navGroup}>
               {!isFirst && (
                 <Pressable
@@ -333,50 +363,86 @@ export async function resetTutorial(): Promise<void> {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   curtain: {
     position: 'absolute',
-    backgroundColor: 'rgba(47,62,70,0.65)',
+    backgroundColor: 'rgba(31, 41, 55, 0.75)',
   },
   coachCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+    borderRadius: Radius.xl,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xl + 16,
+    paddingTop: 50, // Space for the floating mascot
+    paddingBottom: Spacing.xl,
     gap: Spacing.md,
-    borderTopWidth: 2,
-    borderTopColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  coachRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    alignItems: 'flex-start',
-  },
-  mascotFrame: {
-    width: 60,
-    height: 60,
+  mascotStage: {
+    position: 'absolute',
+    top: -65,
+    alignSelf: 'center',
+    width: 120,
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mascot: {
-    width: 54,
-    height: 54,
+  mascotLarge: {
+    width: 110,
+    height: 110,
   },
-  textWrap: {
-    flex: 1,
-    gap: 4,
+  caret: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    alignSelf: 'center',
+  },
+  caretTop: {
+    top: -14,
+    borderLeftWidth: 14,
+    borderRightWidth: 14,
+    borderBottomWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: Colors.primary,
+  },
+  caretBottom: {
+    bottom: -14,
+    borderLeftWidth: 14,
+    borderRightWidth: 14,
+    borderTopWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: Colors.primary,
+  },
+  contentWrap: {
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
+    textAlign: 'center',
   },
   message: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.md,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -394,11 +460,6 @@ const styles = StyleSheet.create({
     width: 24,
     borderRadius: 4,
   },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   skipBtn: {
     paddingHorizontal: 4,
     paddingVertical: 8,
@@ -413,11 +474,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   navBtn: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
     backgroundColor: Colors.bgCard,
   },
   navBtnText: {
@@ -427,7 +486,6 @@ const styles = StyleSheet.create({
   },
   nextBtn: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   nextBtnText: {
     color: '#FFFFFF',
@@ -435,7 +493,6 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   doneBtnText: {
     color: '#FFFFFF',

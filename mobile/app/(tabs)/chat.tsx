@@ -831,7 +831,7 @@ export default function ChatScreen() {
           />
         </Animated.View>
         <View style={styles.headerInfo}>
-          <Text style={styles.coachTitle}>Coach Hoo 🐔</Text>
+          <Text style={styles.coachTitle}>Nokma 🐔</Text>
           <View style={styles.statusBubble}>
             <View style={[styles.statusDot, { backgroundColor: mascotState === 'worry' ? Colors.error : mascotState === 'sleeppp' ? Colors.textMuted : Colors.success }]} />
             <Text style={styles.statusText}>{t(mascotStatusKey)}</Text>
