@@ -6,10 +6,18 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { MealProvider } from '../context/MealContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { ToastProvider } from '../context/ToastContext';
-import { Colors } from '../constants/theme';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { Colors as DefaultColors, ThemeColors } from '../constants/theme';
+import { initDb } from '../services/db';
 
 function RootLayoutNav() {
   const { isOnboarded, isLoading } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = getStyles(colors);
+
+  useEffect(() => {
+    initDb(); // Initialize SQLite DB and handle migration
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -21,43 +29,47 @@ function RootLayoutNav() {
   }, [isOnboarded, isLoading]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }}>
-      <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={colors.bg} />
+      <View style={styles.webGutter}>
+        <View style={styles.appContainer}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </View>
+      </View>
+    </>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <ToastProvider>
-          <MealProvider>
-            <StatusBar style="dark" backgroundColor={Colors.bg} />
-            <View style={styles.webGutter}>
-              <View style={styles.appContainer}>
-                <RootLayoutNav />
-              </View>
-            </View>
-          </MealProvider>
-        </ToastProvider>
-      </LanguageProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <ToastProvider>
+            <MealProvider>
+              <RootLayoutNav />
+            </MealProvider>
+          </ToastProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   webGutter: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#EBECEE' : Colors.bg,
+    backgroundColor: Platform.OS === 'web' ? (colors.bg === '#121212' ? '#000000' : '#EBECEE') : colors.bg,
   },
   appContainer: {
     flex: 1,
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',
-    backgroundColor: Colors.bg,
+    backgroundColor: colors.bg,
     ...(Platform.OS === 'web'
       ? {
           shadowColor: '#000',

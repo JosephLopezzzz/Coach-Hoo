@@ -19,6 +19,7 @@ export interface User {
   intolerances?: string;             // free-text for food intolerances
   created_at: string;
   // Joined from daily_targets
+  use_custom_macros?: boolean;
   calories_target?: number;
   protein_target?: number;
   carbs_target?: number;

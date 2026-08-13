@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable,
+  View, Text, StyleSheet,
   LayoutAnimation, Platform, UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../constants/theme';
 import type { Meal, MealItem } from '../types';
 import { MEAL_TYPES } from '../constants/theme';
 import { RECIPES_DB } from '../services/api';
 import { useMeals } from '../context/MealContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { getMealTypeLabel, getCookingMethodLabel } from '../constants/i18n';
+import AnimatedPressable from './AnimatedPressable';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -23,6 +25,8 @@ interface MealSectionProps {
 
 function ItemRow({ item }: { item: MealItem }) {
   const { lang, t } = useLanguage();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const [showRecipe, setShowRecipe] = useState(false);
   const isRecipe = item.source_type === 'recipe';
   const recipe = isRecipe ? RECIPES_DB.find((r) => r.id === item.source_id) : null;
@@ -38,7 +42,7 @@ function ItemRow({ item }: { item: MealItem }) {
 
   return (
     <View style={styles.itemWrapper}>
-      <Pressable
+      <AnimatedPressable
         style={styles.itemRow}
         onPress={() => isRecipe && setShowRecipe(!showRecipe)}
         disabled={!isRecipe}
@@ -72,12 +76,12 @@ function ItemRow({ item }: { item: MealItem }) {
             <Ionicons
               name={showRecipe ? "chevron-up" : "chevron-down"}
               size={14}
-              color={Colors.textMuted}
+              color={colors.textMuted}
               style={{ marginLeft: 4 }}
             />
           )}
         </View>
-      </Pressable>
+      </AnimatedPressable>
 
       {isRecipe && showRecipe && scaledIngredients.length > 0 && (
         <View style={styles.ingredientsList}>
@@ -103,6 +107,8 @@ function ItemRow({ item }: { item: MealItem }) {
 export default function MealSection({ meal, onDelete }: MealSectionProps) {
   const { targets } = useMeals();
   const { lang, t } = useLanguage();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(true);
 
   const mealMeta = MEAL_TYPES.find((m) => m.key === meal.meal_type) ?? MEAL_TYPES[0];
@@ -136,7 +142,11 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
 
   return (
     <View style={[styles.container, { borderLeftColor: mealMeta.color }]}>
-      <Pressable style={styles.header} onPress={toggle}>
+      <AnimatedPressable
+        style={styles.header}
+        onPress={toggle}
+        scaleTo={0.98}
+      >
         <View style={styles.headerLeft}>
           <Ionicons name={mealMeta.icon as any} size={18} color={mealMeta.color} />
           <Text style={[styles.mealType, { color: mealMeta.color }]}>
@@ -149,17 +159,17 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
         <View style={styles.headerRight}>
           <Text style={styles.totalCal}>{Math.round(totalCal)} kcal</Text>
           {onDelete && (
-            <Pressable onPress={() => onDelete(meal.id)} hitSlop={8}>
-              <Ionicons name="trash-outline" size={16} color={Colors.textMuted} />
-            </Pressable>
+            <AnimatedPressable onPress={() => onDelete(meal.id)} hitSlop={15} scaleTo={0.8} hapticStyle="Medium">
+              <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
+            </AnimatedPressable>
           )}
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={16}
-            color={Colors.textMuted}
+            color={colors.textMuted}
           />
         </View>
-      </Pressable>
+      </AnimatedPressable>
 
       {expanded && (
         <View style={styles.expandedContent}>
@@ -167,17 +177,17 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
           {targets && (
             <View style={styles.alignmentCard}>
               <View style={styles.alignmentHeaderRow}>
-                <Ionicons name="analytics" size={14} color={Colors.textSecondary} />
+                <Ionicons name="analytics" size={14} color={colors.textSecondary} />
                 <Text style={styles.alignmentTitle}>
                   {t('mealSection.alignment', { pct: Math.round(ratio * 100) })}
                 </Text>
               </View>
               <View style={styles.alignmentGrid}>
                 {[
-                  { label: t('macro.calories'), current: totalCal, target: calTarget, pct: calPct, color: Colors.calories, unit: ' kcal' },
-                  { label: t('macro.protein'), current: totalP, target: pTarget, pct: pPct, color: Colors.protein, unit: 'g' },
-                  { label: t('macro.carbs'), current: totalC, target: cTarget, pct: cPct, color: Colors.carbs, unit: 'g' },
-                  { label: t('macro.fat'), current: totalF, target: fTarget, pct: fPct, color: Colors.fat, unit: 'g' },
+                  { label: t('macro.calories'), current: totalCal, target: calTarget, pct: calPct, color: colors.calories, unit: ' kcal' },
+                  { label: t('macro.protein'), current: totalP, target: pTarget, pct: pPct, color: colors.protein, unit: 'g' },
+                  { label: t('macro.carbs'), current: totalC, target: cTarget, pct: cPct, color: colors.carbs, unit: 'g' },
+                  { label: t('macro.fat'), current: totalF, target: fTarget, pct: fPct, color: colors.fat, unit: 'g' },
                 ].map((m) => (
                   <View key={m.label} style={styles.alignmentItem}>
                     <View style={styles.alignmentItemHeader}>
@@ -209,9 +219,9 @@ export default function MealSection({ meal, onDelete }: MealSectionProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderRadius: Radius.md,
     borderLeftWidth: 3,
     marginBottom: Spacing.sm,
@@ -234,7 +244,7 @@ const styles = StyleSheet.create({
   },
   itemCount: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   headerRight: {
     flexDirection: 'row',
@@ -244,17 +254,17 @@ const styles = StyleSheet.create({
   totalCal: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.calories,
+    color: colors.calories,
   },
   expandedContent: {
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: colors.borderLight,
   },
   alignmentCard: {
     padding: Spacing.md,
-    backgroundColor: Colors.bgElevated + '30',
+    backgroundColor: colors.bgElevated + '30',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: colors.borderLight,
   },
   alignmentHeaderRow: {
     flexDirection: 'row',
@@ -265,7 +275,7 @@ const styles = StyleSheet.create({
   alignmentTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -286,7 +296,7 @@ const styles = StyleSheet.create({
   },
   alignmentLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   alignmentValues: {
@@ -296,11 +306,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   mutedText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   miniTrack: {
     height: 4,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: colors.bgElevated,
     borderRadius: Radius.full,
     overflow: 'hidden',
   },
@@ -315,7 +325,7 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
   },
   itemRow: {
     flexDirection: 'row',
@@ -335,11 +345,11 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   recipeBadge: {
-    backgroundColor: Colors.primaryGlow,
-    borderColor: Colors.primary,
+    backgroundColor: colors.primaryGlow,
+    borderColor: colors.primary,
     borderWidth: 0.5,
     borderRadius: Radius.sm,
     paddingHorizontal: 4,
@@ -347,12 +357,12 @@ const styles = StyleSheet.create({
   },
   recipeBadgeText: {
     fontSize: 9,
-    color: Colors.primary,
+    color: colors.primary,
     fontWeight: FontWeight.bold,
   },
   itemMeta: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   itemRight: {
@@ -361,21 +371,21 @@ const styles = StyleSheet.create({
   },
   itemCal: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   ingredientsList: {
-    backgroundColor: Colors.bgElevated + '20',
+    backgroundColor: colors.bgElevated + '20',
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   ingredientsTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   ingredientsGrid: {
@@ -387,30 +397,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
+    borderColor: colors.borderLight,
   },
   bullet: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   ingredientText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   ingredientName: {
     fontWeight: FontWeight.medium,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   emptyText: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     paddingVertical: 12,
   },

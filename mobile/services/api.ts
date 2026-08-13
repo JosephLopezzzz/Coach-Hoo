@@ -2,6 +2,14 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { findAllergenMatches } from './allergenService';
 import { FOODS_DB, RECIPES_DB } from './foodDb';
+import { getDb } from './db';
+
+export const getLocalDateString = (d: Date = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export { FOODS_DB, RECIPES_DB };
 
@@ -109,6 +117,15 @@ export function calculateDailyTargets(user: any) {
   const weight = parseFloat(user.weight_kg) || 70;
   const sex = user.sex || 'male';
   const goal = user.goal || 'maintain';
+
+  if (user.use_custom_macros) {
+    return {
+      calories_target: user.calories_target || 2000,
+      protein_target: user.protein_target || 150,
+      carbs_target: user.carbs_target || 200,
+      fat_target: user.fat_target || 65,
+    };
+  }
 
   // Mifflin-St Jeor Formula BMR
   let bmr = 0;
@@ -352,7 +369,10 @@ export const recipesApi = {
 
 export const mealsApi = {
   log: async (payload: { meal_type: string; items: any[]; notes?: string; logged_date?: string }) => {
-    let stored = await getLocalMeals();
+    const db = getDb();
+    const isWeb = !db;
+    
+    let stored = isWeb ? await getLocalMeals() : [];
     
     const processedItems = await Promise.all(payload.items.map(async (item) => {
       const macros = await calculateItemMacros(item);
@@ -376,22 +396,62 @@ export const mealsApi = {
       id: 'm_' + Math.random().toString(36).substring(7),
       user_id: 'local_user',
       meal_type: payload.meal_type,
-      logged_date: payload.logged_date || new Date().toISOString().split('T')[0],
+      logged_date: payload.logged_date || getLocalDateString(),
       notes: payload.notes || '',
       created_at: new Date().toISOString(),
       items: processedItems,
     };
 
-    stored.push(newMeal);
-    await saveLocalMeals(stored);
+    if (isWeb) {
+      stored.push(newMeal);
+      await saveLocalMeals(stored);
+    } else {
+      db.withTransactionSync(() => {
+        db.runSync(
+          `INSERT INTO meals (id, user_id, meal_type, logged_date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [newMeal.id, newMeal.user_id, newMeal.meal_type, newMeal.logged_date, newMeal.notes, newMeal.created_at]
+        );
+        for (const item of newMeal.items) {
+          db.runSync(
+            `INSERT INTO meal_items 
+             (id, meal_id, source_type, source_id, food_name, quantity_g, cooking_method, with_bones, bone_weight_g, calculated_calories, calculated_protein, calculated_carbs, calculated_fat)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [item.id, newMeal.id, item.source_type, item.source_id, item.food_name, item.quantity_g, item.cooking_method, item.with_bones ? 1 : 0, item.bone_weight_g || null, item.calculated_calories, item.calculated_protein, item.calculated_carbs, item.calculated_fat]
+          );
+        }
+      });
+    }
 
     return { data: newMeal };
   },
 
   today: async (date?: string) => {
-    const targetDate = date || new Date().toISOString().split('T')[0];
-    const meals = await getLocalMeals();
-    const filteredMeals = meals.filter(m => m.logged_date === targetDate);
+    const targetDate = date || getLocalDateString();
+    const db = getDb();
+    const isWeb = !db;
+
+    let filteredMeals: any[] = [];
+    if (isWeb) {
+      const meals = await getLocalMeals();
+      filteredMeals = meals.filter(m => m.logged_date === targetDate);
+    } else {
+      const dbMeals = db.getAllSync<{id: string, user_id: string, meal_type: string, logged_date: string, notes: string, created_at: string}>(
+        `SELECT * FROM meals WHERE logged_date = ?`, [targetDate]
+      );
+      
+      for (const m of dbMeals) {
+        const items = db.getAllSync<any>(
+          `SELECT * FROM meal_items WHERE meal_id = ?`, [m.id]
+        );
+        filteredMeals.push({
+          ...m,
+          items: items.map(item => ({
+            ...item,
+            with_bones: !!item.with_bones,
+          })),
+        });
+      }
+    }
 
     let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
     filteredMeals.forEach(meal => {
@@ -434,9 +494,14 @@ export const mealsApi = {
   },
 
   delete: async (id: string) => {
-    let stored = await getLocalMeals();
-    stored = stored.filter(m => m.id !== id);
-    await saveLocalMeals(stored);
+    const db = getDb();
+    if (!db) {
+      let stored = await getLocalMeals();
+      stored = stored.filter(m => m.id !== id);
+      await saveLocalMeals(stored);
+    } else {
+      db.runSync(`DELETE FROM meals WHERE id = ?`, [id]);
+    }
     return { data: { success: true } };
   },
 };

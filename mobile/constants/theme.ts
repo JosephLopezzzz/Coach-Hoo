@@ -1,6 +1,6 @@
 // ─── Nokma Design System ──────────────────────────────────────────────────
 
-export const Colors = {
+export const lightColors = {
   // Backgrounds
   bg:           '#FAF6EE',  // warm cozy cream/beige background
   bgCard:       '#FFFFFF',  // white card surface
@@ -43,7 +43,57 @@ export const Colors = {
   lunch:        '#9BE1C8',  // Mint
   dinner:       '#7CB7A5',  // Teal
   snack:        '#FFA76C',  // Soft orange
-} as const;
+};
+
+export const darkColors: typeof lightColors = {
+  // Backgrounds
+  bg:           '#121212',  // deep charcoal/black
+  bgCard:       '#1E1E1E',  // elevated dark card
+  bgElevated:   '#2C2C2C',  // lighter dark element
+  bgInput:      '#1E1E1E',
+
+  // Primary brand (slightly brighter for contrast)
+  primary:      '#E35A2D',
+  primaryDim:   '#D94A1E',
+  primaryGlow:  'rgba(227, 90, 45, 0.15)',
+
+  // Accent
+  accent:       '#8BCCB8',
+  accentDim:    '#7CB7A5',
+
+  // Macro colors
+  calories:     '#F5B66A',
+  protein:      '#FFBA89',
+  carbs:        '#AEEFE4',
+  fat:          '#8BCCB8',
+
+  // Text
+  textPrimary:  '#E0E0E0',
+  textSecondary:'#A0A0A0',
+  textMuted:    '#707070',
+  textInverse:  '#FFFFFF',
+
+  // Borders
+  border:       '#333333',
+  borderLight:  '#2C2C2C',
+
+  // Status
+  success:      '#8BCCB8',
+  warning:      '#FFBA89',
+  error:        '#F06565',
+  info:         '#AEEFE4',
+
+  // Meal type colors
+  breakfast:    '#F5B66A',
+  lunch:        '#AEEFE4',
+  dinner:       '#8BCCB8',
+  snack:        '#FFBA89',
+};
+
+// Keep Colors as default (light) to not break files that haven't been migrated yet
+export const Colors = lightColors;
+
+export type ThemeColors = typeof lightColors;
 
 export const Spacing = {
   xs:  4,

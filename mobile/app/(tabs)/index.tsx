@@ -17,7 +17,8 @@ import DashboardTutorial, {
   isTutorialComplete,
 } from '../../components/DashboardTutorial';
 import { useCoachMessage } from '../../hooks/useCoachMessage';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
+import { Colors as StaticColors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES, ThemeColors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const CONFIRMATION_DURATION = 3000;
 
@@ -30,6 +31,8 @@ function CalorieRing({
   target: number;
   size?: number;
 }) {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const animVal = useRef(new Animated.Value(0)).current;
   const pct = target > 0 ? Math.min(consumed / target, 1) : 0;
 
@@ -61,7 +64,7 @@ function CalorieRing({
           cy={cy}
           r={radius}
           fill="transparent"
-          stroke={Colors.bgElevated}
+          stroke={colors.bgElevated}
           strokeWidth={strokeWidth}
         />
         <AnimatedCircle
@@ -69,7 +72,7 @@ function CalorieRing({
           cy={cy}
           r={radius}
           fill="transparent"
-          stroke={Colors.calories}
+          stroke={colors.calories}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -91,6 +94,8 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { lang, t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const { meals, totals, targets, remaining, isLoading, loadToday, deleteMeal } = useMeals();
   const [showTutorial, setShowTutorial] = useState(false);
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
@@ -158,12 +163,14 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Absolute Background Gradient */}
-      <ExpoImage
-        source={require('../../assets/dashboard_bg.jpeg')}
-        style={styles.bgImage}
-        contentFit="cover"
-      />
+      {/* Absolute Background Gradient (hide in dark mode or make very subtle) */}
+      {!isDark && (
+        <ExpoImage
+          source={require('../../assets/dashboard_bg.jpeg')}
+          style={styles.bgImage}
+          contentFit="cover"
+        />
+      )}
 
       <ScrollView
         ref={scrollRef}
@@ -172,7 +179,7 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={() => loadToday()}
-            tintColor={Colors.primary}
+            tintColor={colors.primary}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -217,13 +224,13 @@ export default function DashboardScreen() {
             {/* Slim macro trio bars */}
             <View style={styles.macroTrio}>
               <View style={styles.slimMacroRow}>
-                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                <View style={[styles.slimTrack, { backgroundColor: colors.bgElevated }]}>
                   <View
                     style={[
                       styles.slimFill,
                       {
                         width: `${Math.min((totals.protein / Math.max(proteinTarget, 1)) * 100, 100)}%`,
-                        backgroundColor: Colors.protein,
+                        backgroundColor: colors.protein,
                       },
                     ]}
                   />
@@ -236,13 +243,13 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.slimMacroRow}>
-                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                <View style={[styles.slimTrack, { backgroundColor: colors.bgElevated }]}>
                   <View
                     style={[
                       styles.slimFill,
                       {
                         width: `${Math.min((totals.carbs / Math.max(carbsTarget, 1)) * 100, 100)}%`,
-                        backgroundColor: Colors.carbs,
+                        backgroundColor: colors.carbs,
                       },
                     ]}
                   />
@@ -255,13 +262,13 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.slimMacroRow}>
-                <View style={[styles.slimTrack, { backgroundColor: Colors.bgElevated }]}>
+                <View style={[styles.slimTrack, { backgroundColor: colors.bgElevated }]}>
                   <View
                     style={[
                       styles.slimFill,
                       {
                         width: `${Math.min((totals.fat / Math.max(fatTarget, 1)) * 100, 100)}%`,
-                        backgroundColor: Colors.fat,
+                        backgroundColor: colors.fat,
                       },
                     ]}
                   />
@@ -285,7 +292,7 @@ export default function DashboardScreen() {
                   onPress={() => router.push('/(tabs)/log')}
                   style={styles.addMealBtn}
                 >
-                  <Ionicons name="add" size={16} color={Colors.primary} />
+                  <Ionicons name="add" size={16} color={colors.primary} />
                   <Text style={styles.addMealText}>{t('dash.add')}</Text>
                 </Pressable>
               </View>
@@ -314,7 +321,7 @@ export default function DashboardScreen() {
                   <Ionicons
                     name="add-circle-outline"
                     size={18}
-                    color={Colors.textInverse}
+                    color={colors.textInverse}
                   />
                   <Text style={styles.emptyCtaText}>{t('dash.logAMeal')}</Text>
                 </Pressable>
@@ -340,8 +347,8 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFFFFF' },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
   bgImage: {
     position: 'absolute',
     top: 0,
@@ -365,7 +372,7 @@ const styles = StyleSheet.create({
   },
   contentCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     padding: Spacing.lg,
@@ -378,14 +385,14 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: FontSize.sm,
-    color: '#374151',
+    color: colors.textSecondary,
     marginBottom: 2,
     fontWeight: '500',
   },
   greeting: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: '#111827',
+    color: colors.textPrimary,
   },
   ringCard: {
     backgroundColor: 'transparent',
@@ -401,26 +408,26 @@ const styles = StyleSheet.create({
   ringCals: {
     fontSize: FontSize.hero,
     fontWeight: FontWeight.extrabold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     lineHeight: 48,
   },
   ringLabel: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   ringPct: {
     fontSize: FontSize.sm,
-    color: Colors.calories,
+    color: colors.calories,
     fontWeight: FontWeight.semibold,
     marginTop: 2,
   },
   macroTrio: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     gap: 12,
   },
   slimMacroRow: {
@@ -440,14 +447,14 @@ const styles = StyleSheet.create({
   },
   slimLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
     width: 90,
     textAlign: 'right',
   },
   slimVal: {
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   section: {
     marginTop: Spacing.sm,
@@ -461,32 +468,32 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   addMealBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: colors.primaryGlow,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
   },
   addMealText: {
     fontSize: FontSize.sm,
-    color: Colors.primary,
+    color: colors.primary,
     fontWeight: FontWeight.semibold,
   },
   emptyMeals: {
     alignItems: 'center',
     gap: 10,
     paddingVertical: Spacing.xl,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   emptyMascot: {
@@ -498,11 +505,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   emptySubText: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
     lineHeight: 20,
@@ -511,7 +518,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: Radius.full,
@@ -519,7 +526,7 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: {
     fontSize: FontSize.sm,
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontWeight: FontWeight.semibold,
   },
 });

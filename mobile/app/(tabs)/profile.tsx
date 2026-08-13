@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Alert, ActivityIndicator, Image, Platform,
+  Alert, ActivityIndicator, Image, Platform, Switch, TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,14 +12,17 @@ import { getActivityLabel, labelForOptionKey } from '../../constants/i18n';
 import type { Language } from '../../services/coachMessageService';
 import type { StringKey } from '../../constants/strings';
 import { resetTutorial } from '../../components/DashboardTutorial';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../../constants/theme';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import { useTheme } from '../../context/ThemeContext';
 
 const LANGUAGE_OPTIONS: { key: Language; labelKey: StringKey; flag: string }[] = [
   { key: 'english',  labelKey: 'lang.english',  flag: '🇬🇧' },
   { key: 'filipino', labelKey: 'lang.filipino', flag: '🇵🇭' },
 ];
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({ label, value, colors }: { label: string; value: string; colors: ThemeColors }) {
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   return (
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -28,7 +31,8 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MacroTarget({ label, unit, value, color }: { label: string; unit: string; value: number; color: string }) {
+function MacroTarget({ label, unit, value, color, colors }: { label: string; unit: string; value: number; color: string; colors: ThemeColors }) {
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   return (
     <View style={[styles.macroTarget, { borderColor: `${color}30` }]}>
       <Text style={[styles.macroValue, { color }]}>{Math.round(value)}</Text>
@@ -41,6 +45,8 @@ function MacroTarget({ label, unit, value, color }: { label: string; unit: strin
 export default function ProfileScreen() {
   const { user, resetUser, updateUser } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const { colors, theme, setTheme } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [resetting, setResetting] = useState(false);
 
@@ -112,7 +118,7 @@ export default function ProfileScreen() {
     >
       {/* Avatar / header */}
       <View style={styles.avatarSection}>
-        <Pressable style={styles.avatarWrapper} onPress={handlePickImage}>
+        <AnimatedPressable style={styles.avatarWrapper} onPress={handlePickImage} scaleTo={0.93}>
           <View style={styles.avatarGlow} />
           {user.avatar_uri ? (
             <Image
@@ -121,11 +127,11 @@ export default function ProfileScreen() {
               resizeMode="cover"
             />
           ) : (
-            <View style={[styles.avatarImage, { alignItems: 'center', justifyContent: 'center', borderRadius: Radius.lg, backgroundColor: Colors.bgElevated }]}>
+            <View style={[styles.avatarImage, { alignItems: 'center', justifyContent: 'center', borderRadius: Radius.lg, backgroundColor: colors.bgElevated }]}>
                <Ionicons 
                  name="person" 
                  size={150} 
-                 color={Colors.primary} 
+                 color={colors.primary} 
                />
             </View>
           )}
@@ -133,9 +139,9 @@ export default function ProfileScreen() {
           <View style={styles.cameraBadge}>
             <Ionicons name="camera" size={15} color="#fff" />
           </View>
-        </Pressable>
+        </AnimatedPressable>
         <Text style={styles.userName}>{user.full_name ?? t('profile.defaultName')}</Text>
-        <View style={[styles.goalBadge, { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary }]}>
+        <View style={[styles.goalBadge, { backgroundColor: colors.primaryGlow, borderColor: colors.primary }]}>
           <Text style={styles.goalBadgeText}>
             {user.goal === 'lose'
               ? t('profile.goalLose')
@@ -151,23 +157,83 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('profile.dailyTargets')}</Text>
           <View style={styles.macroTargetsRow}>
-            <MacroTarget label={t('macro.calories')} unit={t('macro.kcal')}  value={user.calories_target}     color={Colors.calories} />
-            <MacroTarget label={t('macro.protein')}  unit={t('macro.grams')} value={user.protein_target ?? 0} color={Colors.protein} />
-            <MacroTarget label={t('macro.carbs')}    unit={t('macro.grams')} value={user.carbs_target   ?? 0} color={Colors.carbs} />
-            <MacroTarget label={t('macro.fat')}      unit={t('macro.grams')} value={user.fat_target     ?? 0} color={Colors.fat} />
+            <MacroTarget label={t('macro.calories')} unit={t('macro.kcal')}  value={user.calories_target}     color={colors.calories} colors={colors} />
+            <MacroTarget label={t('macro.protein')}  unit={t('macro.grams')} value={user.protein_target ?? 0} color={colors.protein}  colors={colors} />
+            <MacroTarget label={t('macro.carbs')}    unit={t('macro.grams')} value={user.carbs_target   ?? 0} color={colors.carbs}    colors={colors} />
+            <MacroTarget label={t('macro.fat')}      unit={t('macro.grams')} value={user.fat_target     ?? 0} color={colors.fat}      colors={colors} />
           </View>
         </View>
       )}
 
+      {/* Custom Macros Settings */}
+      <View style={styles.card}>
+        <View style={styles.settingRow}>
+          <Text style={styles.cardTitle}>Use Custom Macros</Text>
+          <Switch
+            value={user.use_custom_macros ?? false}
+            onValueChange={(val) => updateUser({ use_custom_macros: val })}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        {user.use_custom_macros && (
+          <View style={styles.customMacrosGrid}>
+            <View style={styles.customMacroInputRow}>
+              <Text style={styles.healthLabel}>Calories</Text>
+              <TextInput
+                style={styles.customMacroInput}
+                keyboardType="numeric"
+                value={user.calories_target?.toString() || ''}
+                onChangeText={(t) => updateUser({ calories_target: parseInt(t) || 0 })}
+                placeholder="2000"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+            <View style={styles.customMacroInputRow}>
+              <Text style={styles.healthLabel}>Protein (g)</Text>
+              <TextInput
+                style={styles.customMacroInput}
+                keyboardType="numeric"
+                value={user.protein_target?.toString() || ''}
+                onChangeText={(t) => updateUser({ protein_target: parseInt(t) || 0 })}
+                placeholder="150"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+            <View style={styles.customMacroInputRow}>
+              <Text style={styles.healthLabel}>Carbs (g)</Text>
+              <TextInput
+                style={styles.customMacroInput}
+                keyboardType="numeric"
+                value={user.carbs_target?.toString() || ''}
+                onChangeText={(t) => updateUser({ carbs_target: parseInt(t) || 0 })}
+                placeholder="200"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+            <View style={styles.customMacroInputRow}>
+              <Text style={styles.healthLabel}>Fat (g)</Text>
+              <TextInput
+                style={styles.customMacroInput}
+                keyboardType="numeric"
+                value={user.fat_target?.toString() || ''}
+                onChangeText={(t) => updateUser({ fat_target: parseInt(t) || 0 })}
+                placeholder="65"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* Body stats */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t('profile.bodyStats')}</Text>
-        <StatRow label={t('profile.age')}      value={user.age ? t('profile.ageValue', { age: user.age }) : '—'} />
-        <StatRow label={t('profile.sex')}      value={user.sex ? (user.sex === 'male' ? `♂ ${t('profile.male')}` : `♀ ${t('profile.female')}`) : '—'} />
-        <StatRow label={t('profile.height')}   value={user.height_cm ? `${user.height_cm} cm` : '—'} />
-        <StatRow label={t('profile.weight')}   value={user.weight_kg ? `${user.weight_kg} kg` : '—'} />
-        <StatRow label={t('profile.activity')} value={getActivityLabel(lang, user.activity_level ?? 2)} />
-        <StatRow label={t('profile.country')}  value={user.country ?? 'Philippines'} />
+        <StatRow label={t('profile.age')}      value={user.age ? t('profile.ageValue', { age: user.age }) : '—'} colors={colors} />
+        <StatRow label={t('profile.sex')}      value={user.sex ? (user.sex === 'male' ? `♂ ${t('profile.male')}` : `♀ ${t('profile.female')}`) : '—'} colors={colors} />
+        <StatRow label={t('profile.height')}   value={user.height_cm ? `${user.height_cm} cm` : '—'} colors={colors} />
+        <StatRow label={t('profile.weight')}   value={user.weight_kg ? `${user.weight_kg} kg` : '—'} colors={colors} />
+        <StatRow label={t('profile.activity')} value={getActivityLabel(lang, user.activity_level ?? 2)} colors={colors} />
+        <StatRow label={t('profile.country')}  value={user.country ?? 'Philippines'} colors={colors} />
       </View>
 
       {/* Health Info card */}
@@ -177,9 +243,9 @@ export default function ProfileScreen() {
         {/* Condition */}
         <View style={styles.healthRow}>
           <Text style={styles.healthLabel}>{t('profile.condition')}</Text>
-          <View style={styles.conditionBadge}>
-            <Ionicons name="medical-outline" size={14} color={Colors.warning} />
-            <Text style={styles.conditionText}>
+          <View style={[styles.conditionBadge, { backgroundColor: `${colors.warning}15`, borderColor: `${colors.warning}40` }]}>
+            <Ionicons name="medical-outline" size={14} color={colors.warning} />
+            <Text style={[styles.conditionText, { color: colors.warning }]}>
               {!user.health_condition || user.health_condition === 'none'
                 ? t('common.none')
                 : user.health_condition === 'others' || user.health_condition === 'other'
@@ -197,8 +263,8 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.allergyChipsWrap}>
               {user.allergies.map((a: string) => (
-                <View key={a} style={styles.allergyChip}>
-                  <Text style={styles.allergyChipText}>{labelForOptionKey(lang, a)}</Text>
+                <View key={a} style={[styles.allergyChip, { backgroundColor: `${colors.protein}15`, borderColor: `${colors.protein}40` }]}>
+                  <Text style={[styles.allergyChipText, { color: colors.protein }]}>{labelForOptionKey(lang, a)}</Text>
                 </View>
               ))}
             </View>
@@ -213,24 +279,52 @@ export default function ProfileScreen() {
           {LANGUAGE_OPTIONS.map((option) => {
             const active = lang === option.key;
             return (
-              <Pressable
+              <AnimatedPressable
                 key={option.key}
                 style={[styles.langBtn, active && styles.langBtnActive]}
                 onPress={() => setLang(option.key)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={t(option.labelKey)}
+                scaleTo={0.95}
               >
                 <Text style={styles.langFlag}>{option.flag}</Text>
                 <Text style={[styles.langBtnText, active && styles.langBtnTextActive]}>
                   {t(option.labelKey)}
                 </Text>
-                {active && <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />}
-              </Pressable>
+                {active && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+              </AnimatedPressable>
             );
           })}
         </View>
         <Text style={styles.langHint}>{t('profile.languageHint')}</Text>
+      </View>
+
+      {/* Theme switcher */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Theme</Text>
+        <View style={styles.langRow}>
+          {[
+            { key: 'light', label: 'Light', icon: 'sunny' },
+            { key: 'dark', label: 'Dark', icon: 'moon' },
+            { key: 'system', label: 'Auto', icon: 'color-palette' },
+          ].map((option) => {
+            const active = theme === option.key;
+            return (
+              <AnimatedPressable
+                key={option.key}
+                style={[styles.langBtn, active && styles.langBtnActive]}
+                onPress={() => setTheme(option.key as any)}
+                scaleTo={0.95}
+              >
+                <Ionicons name={option.icon as any} size={18} color={active ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.langBtnText, active && styles.langBtnTextActive]}>
+                  {option.label}
+                </Text>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
       </View>
 
       {/* BMI snapshot */}
@@ -243,7 +337,7 @@ export default function ProfileScreen() {
               : bmi < 25 ? t('profile.bmiNormal')
               : bmi < 30 ? t('profile.bmiOverweight')
               : t('profile.bmiObese');
-            const col = bmi < 18.5 ? Colors.info : bmi < 25 ? Colors.success : Colors.warning;
+            const col = bmi < 18.5 ? colors.info : bmi < 25 ? colors.success : colors.warning;
             return (
               <>
                 <Text style={styles.bmiLabel}>{t('profile.bmi')}</Text>
@@ -256,7 +350,7 @@ export default function ProfileScreen() {
       )}
 
       {/* Replay Tutorial */}
-      <Pressable
+      <AnimatedPressable
         style={styles.replayBtn}
         onPress={() => {
           resetTutorial();
@@ -266,20 +360,21 @@ export default function ProfileScreen() {
             Alert.alert(t('profile.tutorialReset'), t('profile.tutorialResetBody'));
           }
         }}
+        scaleTo={0.96}
       >
-        <Ionicons name="help-circle-outline" size={20} color={Colors.primary} />
+        <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
         <Text style={styles.replayBtnText}>{t('profile.replayTutorial')}</Text>
-      </Pressable>
+      </AnimatedPressable>
 
       {/* Reset */}
-      <Pressable style={styles.logoutBtn} onPress={handleReset} disabled={resetting}>
+      <AnimatedPressable style={styles.logoutBtn} onPress={handleReset} disabled={resetting} scaleTo={0.96}>
         {resetting
-          ? <ActivityIndicator color={Colors.error} />
+          ? <ActivityIndicator color={colors.error} />
           : <>
-              <Ionicons name="trash-outline" size={20} color={Colors.error} />
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
               <Text style={styles.logoutText}>{t('profile.resetProgress')}</Text>
             </>}
-      </Pressable>
+      </AnimatedPressable>
 
 
       <Text style={styles.version}>{t('profile.version')}</Text>
@@ -287,8 +382,8 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
   content: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 40 },
   avatarSection: { alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
   avatarWrapper: {
@@ -298,8 +393,8 @@ const styles = StyleSheet.create({
   avatarGlow: {
     position: 'absolute',
     width: 206, height: 206, borderRadius: Radius.lg + 3,
-    backgroundColor: Colors.primaryGlow,
-    borderWidth: 3, borderColor: Colors.primary,
+    backgroundColor: colors.primaryGlow,
+    borderWidth: 3, borderColor: colors.primary,
   },
   avatarImage: { width: 200, height: 200 },
   cameraBadge: {
@@ -313,74 +408,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.bg,
+    borderColor: colors.bg,
   },
-  userName:  { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-  userEmail: { fontSize: FontSize.sm,  color: Colors.textMuted },
+  userName:  { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: colors.textPrimary },
+  userEmail: { fontSize: FontSize.sm,  color: colors.textMuted },
   goalBadge: {
     flexDirection: 'row', borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: Radius.full,
   },
-  goalBadgeText: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: FontWeight.semibold },
+  goalBadgeText: { fontSize: FontSize.sm, color: colors.primary, fontWeight: FontWeight.semibold },
   card: {
-    backgroundColor: Colors.bgCard, borderRadius: Radius.xl, padding: Spacing.lg,
-    borderWidth: 1, borderColor: Colors.border, gap: 4,
+    backgroundColor: colors.bgCard, borderRadius: Radius.xl, padding: Spacing.lg,
+    borderWidth: 1, borderColor: colors.border, gap: 4,
   },
-  cardTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.sm },
+  cardTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.textPrimary, marginBottom: Spacing.sm },
   macroTargetsRow: { flexDirection: 'row', gap: 8 },
   macroTarget: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.md, borderWidth: 1 },
   macroValue: { fontSize: FontSize.xl, fontWeight: FontWeight.bold },
-  macroUnit:  { fontSize: FontSize.xs, color: Colors.textMuted },
-  macroLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  macroUnit:  { fontSize: FontSize.xs, color: colors.textMuted },
+  macroLabel: { fontSize: FontSize.xs, color: colors.textSecondary, marginTop: 2 },
   statRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border,
   },
-  statLabel: { fontSize: FontSize.sm, color: Colors.textMuted },
-  statValue: { fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: FontWeight.semibold },
+  statLabel: { fontSize: FontSize.sm, color: colors.textMuted },
+  statValue: { fontSize: FontSize.sm, color: colors.textPrimary, fontWeight: FontWeight.semibold },
   bmiCard: {
-    backgroundColor: Colors.bgCard, borderRadius: Radius.xl,
-    padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: colors.bgCard, borderRadius: Radius.xl,
+    padding: Spacing.lg, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', gap: 4,
   },
-  bmiLabel: { fontSize: FontSize.sm, color: Colors.textMuted },
+  bmiLabel: { fontSize: FontSize.sm, color: colors.textMuted },
   bmiValue: { fontSize: FontSize.hero, fontWeight: FontWeight.extrabold },
   bmiCat:   { fontSize: FontSize.md,  fontWeight: FontWeight.semibold },
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, padding: Spacing.md, borderRadius: Radius.lg,
-    borderWidth: 1, borderColor: `${Colors.error}40`, backgroundColor: `${Colors.error}10`,
+    borderWidth: 1, borderColor: `${colors.error}40`, backgroundColor: `${colors.error}10`,
   },
-  logoutText: { fontSize: FontSize.md, color: Colors.error, fontWeight: FontWeight.semibold },
-  version:    { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm },
+  logoutText: { fontSize: FontSize.md, color: colors.error, fontWeight: FontWeight.semibold },
+  version:    { fontSize: FontSize.xs, color: colors.textMuted, textAlign: 'center', marginTop: Spacing.sm },
 
   // Replay tutorial
   replayBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, padding: Spacing.md, borderRadius: Radius.lg,
-    borderWidth: 1, borderColor: `${Colors.primary}40`, backgroundColor: `${Colors.primary}10`,
+    borderWidth: 1, borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}10`,
   },
-  replayBtnText: { fontSize: FontSize.md, color: Colors.primary, fontWeight: FontWeight.semibold },
+  replayBtnText: { fontSize: FontSize.md, color: colors.primary, fontWeight: FontWeight.semibold },
 
   // Health Info card
-  healthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.border },
-  healthLabel: { fontSize: FontSize.sm, color: Colors.textMuted },
-  conditionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${Colors.warning}15`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: `${Colors.warning}40` },
-  conditionText: { fontSize: FontSize.sm, color: Colors.warning, fontWeight: FontWeight.semibold },
+  healthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  healthLabel: { fontSize: FontSize.sm, color: colors.textMuted },
+  conditionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1 },
+  conditionText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
   allergyChipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, flex: 1, justifyContent: 'flex-end' },
-  allergyChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, backgroundColor: `${Colors.protein}15`, borderWidth: 1, borderColor: `${Colors.protein}40` },
-  allergyChipText: { fontSize: FontSize.xs, color: Colors.protein, fontWeight: FontWeight.semibold, textTransform: 'capitalize' },
+  allergyChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1 },
+  allergyChipText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, textTransform: 'capitalize' },
 
   // Language switcher
   langRow: { flexDirection: 'row', gap: Spacing.sm },
   langBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 12, borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bgElevated,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElevated,
   },
-  langBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryGlow },
+  langBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryGlow },
   langFlag: { fontSize: FontSize.md },
-  langBtnText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.semibold },
-  langBtnTextActive: { color: Colors.primary },
-  langHint: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: Spacing.sm },
+  langBtnText: { fontSize: FontSize.sm, color: colors.textSecondary, fontWeight: FontWeight.semibold },
+  langBtnTextActive: { color: colors.primary },
+  langHint: { fontSize: FontSize.xs, color: colors.textMuted, marginTop: Spacing.sm },
+
+  // Custom Macros Settings
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  customMacrosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: Spacing.sm },
+  customMacroInputRow: { width: '48%' },
+  customMacroInput: {
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    fontSize: FontSize.md,
+    color: colors.textPrimary,
+    marginTop: 4,
+  },
 });

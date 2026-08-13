@@ -3,13 +3,15 @@ import {
   View, Text, StyleSheet, TextInput,
   Pressable, ScrollView, Switch,
 } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../constants/theme';
 import { COOKING_METHODS, FOOD_TYPES } from '../constants/theme';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getCookingMethodLabel, labelForOptionKey } from '../constants/i18n';
 import { findTextAllergens } from '../services/allergenService';
 import type { LogManualItem } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import AnimatedPressable from './AnimatedPressable';
 
 interface ManualEntryFormProps {
   onSubmit: (item: LogManualItem) => void;
@@ -22,19 +24,23 @@ type ChipListProps<T extends string> = {
   color?:   string;
 };
 
-function ChipList<T extends string>({ options, value, onChange, color = Colors.primary }: ChipListProps<T>) {
+function ChipList<T extends string>({ options, value, onChange, color }: ChipListProps<T>) {
+  const { colors } = useTheme();
+  const chipColor = color || colors.primary;
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
       {options.map((opt) => {
         const selected = value === opt.key;
         return (
-          <Pressable
+          <AnimatedPressable
             key={opt.key}
-            style={[styles.chip, selected && { backgroundColor: color, borderColor: color }]}
+            style={[styles.chip, selected && { backgroundColor: chipColor, borderColor: chipColor }]}
             onPress={() => onChange(opt.key)}
+            scaleTo={0.92}
           >
             <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{opt.label}</Text>
-          </Pressable>
+          </AnimatedPressable>
         );
       })}
     </ScrollView>
@@ -46,19 +52,22 @@ function FoodTypeChips({
 }: {
   value: string; onChange: (v: string) => void;
 }) {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const options = FOOD_TYPES.map((f) => ({ key: f as string, label: f.replace(/-/g, ' ') }));
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
       {options.map((opt) => {
         const selected = value === opt.key;
         return (
-          <Pressable
+          <AnimatedPressable
             key={opt.key}
-            style={[styles.chip, selected && { backgroundColor: Colors.accent, borderColor: Colors.accent }]}
+            style={[styles.chip, selected && { backgroundColor: colors.accent, borderColor: colors.accent }]}
             onPress={() => onChange(opt.key)}
+            scaleTo={0.92}
           >
             <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{opt.label}</Text>
-          </Pressable>
+          </AnimatedPressable>
         );
       })}
     </ScrollView>
@@ -68,6 +77,8 @@ function FoodTypeChips({
 export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const { lang, t } = useLanguage();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const [foodType,      setFoodType]      = useState('chicken');
   const [cookingMethod, setCookingMethod] = useState('raw');
   const [grams,         setGrams]         = useState('100');
@@ -124,7 +135,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       <TextInput
         style={styles.input}
         placeholder={t('form.foodPlaceholder')}
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={foodType}
         onChangeText={handleFoodTypeChange}
       />
@@ -134,7 +145,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         options={cookingOptions}
         value={cookingMethod as any}
         onChange={setCookingMethod as any}
-        color={Colors.primary}
+        color={colors.primary}
       />
 
       <Text style={styles.sectionLabel}>{t('form.amountGrams')}</Text>
@@ -142,7 +153,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         style={styles.input}
         keyboardType="decimal-pad"
         placeholder={t('ph.exampleGrams')}
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={grams}
         onChangeText={setGrams}
       />
@@ -150,15 +161,16 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       {/* Quick gram buttons */}
       <View style={styles.quickGrams}>
         {['100', '150', '200', '250'].map((g) => (
-          <Pressable
+          <AnimatedPressable
             key={g}
             style={[styles.gramBtn, grams === g && styles.gramBtnActive]}
             onPress={() => setGrams(g)}
+            scaleTo={0.93}
           >
             <Text style={[styles.gramBtnText, grams === g && styles.gramBtnTextActive]}>
               {g}g
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         ))}
       </View>
 
@@ -171,8 +183,8 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
           <Switch
             value={hasBones}
             onValueChange={setHasBones}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.textPrimary}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.textPrimary}
           />
         </View>
         {hasBones && (
@@ -182,7 +194,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
               style={styles.boneInput}
               keyboardType="decimal-pad"
               placeholder={t('ph.exampleBones')}
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={boneWeight}
               onChangeText={setBoneWeight}
             />
@@ -195,18 +207,18 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         <Switch
           value={showMacros}
           onValueChange={setShowMacros}
-          trackColor={{ false: Colors.border, true: Colors.accent }}
-          thumbColor={Colors.textPrimary}
+          trackColor={{ false: colors.border, true: colors.accent }}
+          thumbColor={colors.textPrimary}
         />
       </View>
 
       {showMacros && (
         <View style={styles.manualMacrosGrid}>
           {[
-            { key: 'cal', label: t('macro.calories'), color: Colors.calories },
-            { key: 'p',   label: t('macro.protein'),  color: Colors.protein },
-            { key: 'c',   label: t('macro.carbs'),    color: Colors.carbs },
-            { key: 'f',   label: t('macro.fat'),      color: Colors.fat },
+            { key: 'cal', label: t('macro.calories'), color: colors.calories },
+            { key: 'p',   label: t('macro.protein'),  color: colors.protein },
+            { key: 'c',   label: t('macro.carbs'),    color: colors.carbs },
+            { key: 'f',   label: t('macro.fat'),      color: colors.fat },
           ].map((m) => (
             <View key={m.key} style={styles.macroInputBox}>
               <Text style={[styles.macroInputLabel, { color: m.color }]}>{m.label}</Text>
@@ -214,7 +226,7 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 style={styles.macroInput}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor={Colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 value={(macros as any)[m.key]}
                 onChangeText={(v) => setMacros({ ...macros, [m.key]: v })}
               />
@@ -233,21 +245,21 @@ export default function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         </View>
       )}
 
-      <Pressable style={styles.submitBtn} onPress={handleSubmit}>
+      <AnimatedPressable style={styles.submitBtn} onPress={handleSubmit} scaleTo={0.97}>
         <Text style={styles.submitText}>{t('form.addToMeal')}</Text>
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     gap: Spacing.sm,
   },
   sectionLabel: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 2,
     marginTop: 4,
   },
@@ -259,25 +271,25 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginRight: 8,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
   },
   chipText: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   chipTextSelected: {
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontWeight: FontWeight.semibold,
   },
   input: {
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     padding: Spacing.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.md,
   },
   quickGrams: {
@@ -288,25 +300,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: Radius.sm,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: colors.bgElevated,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   gramBtnActive: {
-    backgroundColor: Colors.primaryGlow,
-    borderColor: Colors.primary,
+    backgroundColor: colors.primaryGlow,
+    borderColor: colors.primary,
   },
   gramBtnText: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   gramBtnTextActive: {
-    color: Colors.primary,
+    color: colors.primary,
     fontWeight: FontWeight.bold,
   },
   bonesContainer: {
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: colors.bgElevated,
     padding: Spacing.md,
     borderRadius: Radius.md,
     marginTop: 4,
@@ -319,7 +331,7 @@ const styles = StyleSheet.create({
   },
   bonesHint: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   boneWeightInputRow: {
@@ -327,23 +339,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
     paddingTop: Spacing.sm,
     marginTop: Spacing.xs,
   },
   boneWeightLabel: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   boneInput: {
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.md,
     width: 100,
     textAlign: 'right',
@@ -364,11 +376,11 @@ const styles = StyleSheet.create({
   macroInputBox: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
     padding: Spacing.sm,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   macroInputLabel: {
     fontSize: 10,
@@ -377,19 +389,19 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   macroInput: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.md,
     height: 32,
     padding: 0,
   },
   error: {
-    color: Colors.error,
+    color: colors.error,
     fontSize: FontSize.sm,
   },
   allergenWarning: {
-    backgroundColor: `${Colors.error}12`,
+    backgroundColor: `${colors.error}12`,
     borderWidth: 1,
-    borderColor: `${Colors.error}45`,
+    borderColor: `${colors.error}45`,
     borderRadius: Radius.md,
     padding: Spacing.md,
     flexDirection: 'row',
@@ -397,20 +409,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   allergenWarningText: {
-    color: Colors.error,
+    color: colors.error,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     flex: 1,
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
     marginTop: 4,
   },
   submitText: {
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
   },

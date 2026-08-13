@@ -31,7 +31,8 @@
         {
           "fonts": []
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

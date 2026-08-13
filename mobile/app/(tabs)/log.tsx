@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMeals } from '../../context/MealContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -12,16 +13,22 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { getMealTypeLabel, getCookingMethodLabel, labelForOptionKey } from '../../constants/i18n';
 import ManualEntryForm from '../../components/ManualEntryForm';
-import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, MEAL_TYPES, ThemeColors } from '../../constants/theme';
 import type { LogItem } from '../../types';
 import { calculateApi } from '../../services/api';
 import { resolveLogItemKeywords, findAllergenMatches } from '../../services/allergenService';
+import { scanNutritionFacts } from '../../services/nutritionScanner';
+import { isOnline, enqueueTask, processSyncQueue } from '../../services/syncService';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function LogMealScreen() {
   const { logMeal } = useMeals();
   const { showToast } = useToast();
   const { lang, t } = useLanguage();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [mealType, setMealType] = useState<string>('breakfast');
   const [items,    setItems]    = useState<LogItem[]>([]);
@@ -29,6 +36,42 @@ export default function LogMealScreen() {
   const [preview,  setPreview]  = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [tab,      setTab]      = useState<'manual' | 'preview'>('manual');
+  const [networkStatus, setNetworkStatus] = useState(true);
+
+  // Poll for background sync
+  useEffect(() => {
+    const checkSync = async () => {
+      const online = await isOnline();
+      setNetworkStatus(online);
+      
+      if (online) {
+        await processSyncQueue((type, parsed) => {
+          if (type === 'scan_nutrition_label' && parsed) {
+            const scannedItem: LogItem = {
+              type: 'manual',
+              food_type: parsed.food_name,
+              quantity_g: parsed.serving_size_g || 100,
+              manual_macros: {
+                calories: parsed.calories,
+                protein: parsed.protein,
+                carbs: parsed.carbs,
+                fat: parsed.fat,
+              },
+              method: 'raw',
+              with_bones: false,
+            };
+            confirmAddItem(scannedItem);
+            showToast({ type: 'success', title: 'Offline Scan Processed', subtitle: `Added ${parsed.food_name}.` });
+          }
+        });
+      }
+    };
+    
+    // Check immediately, then every 10 seconds
+    checkSync();
+    const interval = setInterval(checkSync, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const addItem = async (item: LogItem, isFlagged = false) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -102,23 +145,82 @@ export default function LogMealScreen() {
     }
   };
 
+  const handleScanLabel = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required to scan nutrition labels.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        base64: true,
+        allowsEditing: true,
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64 = result.assets[0].base64;
+        const online = await isOnline();
+        
+        if (!online) {
+          // Offline Fallback
+          enqueueTask('scan_nutrition_label', { base64 });
+          showToast({ type: 'success', title: 'Offline', subtitle: 'Label saved. Will process when connection restores.' });
+        } else {
+          // Process immediately
+          setLoading(true);
+          const parsed = await scanNutritionFacts(base64);
+          
+          const scannedItem: LogItem = {
+            type: 'manual',
+            food_type: parsed.food_name,
+            quantity_g: parsed.serving_size_g || 100,
+            manual_macros: {
+              calories: parsed.calories,
+              protein: parsed.protein,
+              carbs: parsed.carbs,
+              fat: parsed.fat,
+            },
+            method: 'raw',
+            with_bones: false,
+          };
+          
+          confirmAddItem(scannedItem);
+          showToast({ type: 'success', title: 'Scan Successful', subtitle: `Added ${parsed.food_name} from label.` });
+        }
+      }
+    } catch (e: any) {
+      console.error('Scan failed:', e);
+      Alert.alert('Scan Failed', e.message || 'Could not read the nutrition label.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
-        <Text style={styles.title}>{t('log.title')}</Text>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.title}>{t('log.title')}</Text>
+          {!networkStatus && (
+            <Ionicons name="cloud-offline" size={24} color={colors.textMuted} />
+          )}
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
           {MEAL_TYPES.map((mt) => (
-            <Pressable
+            <AnimatedPressable
               key={mt.key}
               style={[styles.mealTypeBtn, mealType === mt.key && { backgroundColor: `${mt.color}20`, borderColor: mt.color }]}
               onPress={() => setMealType(mt.key)}
+              scaleTo={0.95}
             >
-              <Ionicons name={mt.icon as any} size={16} color={mealType === mt.key ? mt.color : Colors.textMuted} />
+              <Ionicons name={mt.icon as any} size={16} color={mealType === mt.key ? mt.color : colors.textMuted} />
               <Text style={[styles.mealTypeText, mealType === mt.key && { color: mt.color }]}>
                 {getMealTypeLabel(lang, mt.key)}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </ScrollView>
       </View>
@@ -134,22 +236,22 @@ export default function LogMealScreen() {
               return (
                 <View key={idx} style={[styles.pendingItem, flagged[idx] && styles.pendingItemWarn]}>
                   <View style={styles.pendingLabelRow}>
-                    {flagged[idx] && <Ionicons name="warning" size={16} color={Colors.error} />}
+                    {flagged[idx] && <Ionicons name="warning" size={16} color={colors.error} />}
                     <Text style={styles.pendingLabel} numberOfLines={1}>{label}</Text>
                   </View>
-                  <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
-                    <Ionicons name="close-circle" size={20} color={Colors.error} />
-                  </Pressable>
+                  <AnimatedPressable onPress={() => removeItem(idx)} hitSlop={10} scaleTo={0.8} hapticStyle="Medium">
+                    <Ionicons name="close-circle" size={20} color={colors.error} />
+                  </AnimatedPressable>
                 </View>
               );
             })}
             {preview && (
               <View style={styles.previewRow}>
                 {[
-                  { label: t('macro.kcal'), value: preview.calories, color: Colors.calories },
-                  { label: 'P',    value: preview.protein,  color: Colors.protein },
-                  { label: 'C',    value: preview.carbs,    color: Colors.carbs },
-                  { label: 'F',    value: preview.fat,      color: Colors.fat },
+                  { label: t('macro.kcal'), value: preview.calories, color: colors.calories },
+                  { label: 'P',    value: preview.protein,  color: colors.protein },
+                  { label: 'C',    value: preview.carbs,    color: colors.carbs },
+                  { label: 'F',    value: preview.fat,      color: colors.fat },
                 ].map((m) => (
                   <View key={m.label} style={[styles.previewPill, { backgroundColor: `${m.color}15` }]}>
                     <Text style={[styles.previewValue, { color: m.color }]}>{Math.round(m.value)}</Text>
@@ -163,43 +265,55 @@ export default function LogMealScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('log.manualEntry')}</Text>
+          
+          <AnimatedPressable style={styles.scanBtn} onPress={handleScanLabel} disabled={loading} scaleTo={0.97}>
+            <Ionicons name="barcode-outline" size={24} color={colors.primary} />
+            <Text style={styles.scanBtnText}>Scan Nutrition Facts Label</Text>
+          </AnimatedPressable>
+
           <ManualEntryForm onSubmit={confirmAddItem} />
         </View>
 
-        <Pressable
+        <AnimatedPressable
           style={[styles.submitBtn, items.length === 0 && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={loading || items.length === 0}
+          scaleTo={0.96}
         >
           {loading
-            ? <ActivityIndicator color={Colors.textInverse} />
+            ? <ActivityIndicator color={colors.textInverse} />
             : <>
-                <Ionicons name="checkmark-circle-outline" size={20} color={Colors.textInverse} />
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.textInverse} />
                 <Text style={styles.submitText}>
                   {t('log.submit', { mealType: getMealTypeLabel(lang, mealType), count: items.length })}
                 </Text>
               </>
           }
-        </Pressable>
+        </AnimatedPressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
   header: {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.bgCard,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.bgCard,
     paddingBottom: Spacing.md,
   },
   title: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   mealTypeScroll: {
     flexDirection: 'row',
@@ -212,13 +326,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginRight: 8,
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
   },
   mealTypeText: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   body: {
@@ -230,85 +344,100 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: Spacing.sm,
   },
   pendingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: Colors.bgElevated,
-    borderRadius: Radius.md,
-    marginBottom: 6,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   pendingItemWarn: {
-    backgroundColor: `${Colors.error}10`,
-    borderWidth: 1,
-    borderColor: `${Colors.error}40`,
+    backgroundColor: `${colors.error}10`,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
+    borderBottomWidth: 0,
+    marginBottom: 4,
   },
   pendingLabelRow: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginRight: 8,
+    gap: 8,
+    flex: 1,
+    paddingRight: Spacing.md,
   },
   pendingLabel: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.textPrimary,
+    fontSize: FontSize.md,
+    color: colors.textPrimary,
   },
   previewRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: Spacing.sm,
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   previewPill: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.md,
   },
   previewValue: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
   },
   previewLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
     paddingVertical: 14,
-    marginTop: Spacing.xs,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
+    backgroundColor: colors.primary,
   },
   submitBtnDisabled: {
-    backgroundColor: Colors.bgElevated,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: colors.border,
   },
   submitText: {
-    fontSize: FontSize.md,
+    color: colors.textInverse,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textInverse,
+  },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primaryGlow,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+  },
+  scanBtnText: {
+    color: colors.primary,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
   },
 });

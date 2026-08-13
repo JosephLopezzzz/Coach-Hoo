@@ -12,7 +12,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { getMealTypeLabel, getGoalLabel, labelForOptionKey } from '../../constants/i18n';
 import type { StringKey } from '../../constants/strings';
-import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, MEAL_TYPES, ThemeColors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { FOODS_DB, RECIPES_DB, RESTAURANT_DB, calculateItemMacros, recommendApi } from '../../services/api';
 import { resolveLogItemKeywords, findAllergenMatches } from '../../services/allergenService';
 
@@ -104,6 +105,8 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const { lang, t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
 
   const [messages, setMessages] = useState<Message[]>(() => [
     {
@@ -833,7 +836,7 @@ export default function ChatScreen() {
         <View style={styles.headerInfo}>
           <Text style={styles.coachTitle}>Nokma 🐔</Text>
           <View style={styles.statusBubble}>
-            <View style={[styles.statusDot, { backgroundColor: mascotState === 'worry' ? Colors.error : mascotState === 'sleeppp' ? Colors.textMuted : Colors.success }]} />
+            <View style={[styles.statusDot, { backgroundColor: mascotState === 'worry' ? colors.error : mascotState === 'sleeppp' ? colors.textMuted : colors.success }]} />
             <Text style={styles.statusText}>{t(mascotStatusKey)}</Text>
           </View>
         </View>
@@ -850,7 +853,7 @@ export default function ChatScreen() {
         ListFooterComponent={
           isTyping ? (
             <View style={styles.typingBubble}>
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.typingText}>{t('chat.writing')}</Text>
               </View>
           ) : null
@@ -878,12 +881,12 @@ export default function ChatScreen() {
       {/* Message Input Bar */}
       <View style={styles.inputContainer}>
         <Pressable style={styles.attachBtn} onPress={handleScanNutrition}>
-          <Ionicons name="camera" size={24} color={Colors.textMuted} />
+          <Ionicons name="camera" size={24} color={colors.textMuted} />
         </Pressable>
         <TextInput
           style={styles.input}
           placeholder={t('chat.inputPlaceholder')}
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={inputText}
           onChangeText={setInputText}
           multiline={false}
@@ -894,7 +897,7 @@ export default function ChatScreen() {
           onPress={() => handleSend(inputText)}
           disabled={!inputText.trim()}
         >
-          <Ionicons name="send" size={18} color={Colors.textInverse} />
+          <Ionicons name="send" size={18} color={colors.textInverse} />
         </Pressable>
       </View>
 
@@ -905,7 +908,7 @@ export default function ChatScreen() {
             <Text style={styles.modalTitle}>{t('ocr.addScanned')}</Text>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
               <Text style={styles.inputLabel}>{t('ocr.foodName')}</Text>
-              <TextInput style={styles.modalInput} placeholder={t('ph.exampleName')} placeholderTextColor={Colors.textMuted} value={scannedName} onChangeText={setScannedName} />
+              <TextInput style={styles.modalInput} placeholder={t('ph.exampleName')} placeholderTextColor={colors.textMuted} value={scannedName} onChangeText={setScannedName} />
 
               <Text style={styles.inputLabel}>{t('ocr.mealType')}</Text>
               <View style={styles.mealTypeChips}>
@@ -917,16 +920,16 @@ export default function ChatScreen() {
               </View>
 
               <Text style={styles.inputLabel}>{t('macro.calories')}</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCals} onChangeText={setScannedCals} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={scannedCals} onChangeText={setScannedCals} />
 
               <Text style={styles.inputLabel}>{t('macro.proteinG')}</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedProtein} onChangeText={setScannedProtein} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={scannedProtein} onChangeText={setScannedProtein} />
 
               <Text style={styles.inputLabel}>{t('macro.carbsG')}</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedCarbs} onChangeText={setScannedCarbs} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={scannedCarbs} onChangeText={setScannedCarbs} />
 
               <Text style={styles.inputLabel}>{t('macro.fatG')}</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={scannedFat} onChangeText={setScannedFat} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={scannedFat} onChangeText={setScannedFat} />
 
               <View style={styles.modalBtnRow}>
                 <Pressable style={styles.modalCancelBtn} onPress={() => setOcrModalVisible(false)}>
@@ -945,16 +948,16 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.bgCard,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.bgCard,
     gap: Spacing.md,
   },
   mascotFrame: {
@@ -977,7 +980,7 @@ const styles = StyleSheet.create({
   coachTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   statusBubble: {
     flexDirection: 'row',
@@ -991,7 +994,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   chatList: {
@@ -1017,9 +1020,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: colors.bgElevated,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1035,13 +1038,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   msgBubbleCoach: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderTopLeftRadius: 2,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   msgBubbleUser: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     borderTopRightRadius: 2,
   },
   msgText: {
@@ -1049,10 +1052,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   msgTextCoach: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   msgTextUser: {
-    color: Colors.textInverse,
+    color: colors.textInverse,
   },
   msgTime: {
     fontSize: 9,
@@ -1060,7 +1063,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   msgTimeCoach: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   msgTimeUser: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -1076,9 +1079,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: Radius.lg,
     borderTopLeftRadius: 2,
     paddingHorizontal: Spacing.md,
@@ -1086,11 +1089,11 @@ const styles = StyleSheet.create({
   },
   typingText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   suggestionsWrapper: {
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.bg,
+    backgroundColor: colors.bg,
   },
   suggestionsScroll: {
     paddingHorizontal: Spacing.md,
@@ -1098,15 +1101,15 @@ const styles = StyleSheet.create({
   suggestionChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: Radius.full,
     marginRight: 8,
   },
   suggestionText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   inputContainer: {
@@ -1115,33 +1118,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.bgCard,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bgCard,
     gap: 8,
   },
   input: {
     flex: 1,
     height: 44,
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.lg,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.md,
   },
   sendBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
   },
   sendBtnDisabled: {
-    backgroundColor: Colors.bgElevated,
-    borderColor: Colors.border,
+    backgroundColor: colors.bgElevated,
+    borderColor: colors.border,
   },
   attachBtn: {
     padding: Spacing.sm,
@@ -1151,19 +1154,19 @@ const styles = StyleSheet.create({
   
   // OCR Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: Colors.bgCard, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, maxHeight: '80%' },
-  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.md },
+  modalContent: { backgroundColor: colors.bgCard, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, maxHeight: '80%' },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.textPrimary, marginBottom: Spacing.md },
   modalScroll: { gap: Spacing.sm },
-  inputLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium, marginTop: 4 },
-  modalInput: { backgroundColor: Colors.bgInput, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, color: Colors.textPrimary, fontSize: FontSize.md },
+  inputLabel: { fontSize: FontSize.sm, color: colors.textSecondary, fontWeight: FontWeight.medium, marginTop: 4 },
+  modalInput: { backgroundColor: colors.bgInput, borderWidth: 1, borderColor: colors.border, borderRadius: Radius.md, padding: Spacing.md, color: colors.textPrimary, fontSize: FontSize.md },
   mealTypeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  mealTypeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.bgInput },
-  mealTypeChipActive: { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary },
-  mealTypeChipText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  mealTypeChipTextActive: { color: Colors.primary, fontWeight: FontWeight.bold },
+  mealTypeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgInput },
+  mealTypeChipActive: { backgroundColor: colors.primaryGlow, borderColor: colors.primary },
+  mealTypeChipText: { fontSize: FontSize.sm, color: colors.textSecondary },
+  mealTypeChipTextActive: { color: colors.primary, fontWeight: FontWeight.bold },
   modalBtnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
-  modalCancelBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.bgElevated },
-  modalCancelText: { color: Colors.textPrimary, fontWeight: FontWeight.bold },
-  modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.primary },
-  modalSaveText: { color: Colors.textInverse, fontWeight: FontWeight.bold },
+  modalCancelBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: colors.bgElevated },
+  modalCancelText: { color: colors.textPrimary, fontWeight: FontWeight.bold },
+  modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: colors.primary },
+  modalSaveText: { color: colors.textInverse, fontWeight: FontWeight.bold },
 });

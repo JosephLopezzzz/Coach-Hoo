@@ -9,8 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { foodsApi, recipesApi, recommendApi, RECIPES_DB } from '../../services/api';
 import { findAllergenMatches } from '../../services/allergenService';
 import FoodCard from '../../components/FoodCard';
-import { Colors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES } from '../../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, MEAL_TYPES, ThemeColors } from '../../constants/theme';
 import type { Food, Recipe, RestaurantFood } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { useAuth } from '../../context/AuthContext';
 import { useMeals } from '../../context/MealContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -28,6 +30,8 @@ export default function SearchScreen() {
   const { user } = useAuth();
   const { logMeal, remaining, targets, meals } = useMeals();
   const { lang, t } = useLanguage();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [query,       setQuery]       = useState('');
   const [activeTab,   setActiveTab]   = useState<TabKey>('foods');
@@ -260,7 +264,7 @@ export default function SearchScreen() {
           />
           {isCustom && (
             <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, false)}>
-              <Ionicons name="trash" size={16} color={Colors.error} />
+              <Ionicons name="trash" size={16} color={colors.error} />
               <Text style={styles.deleteBtnText}>{t('search.deleteCustomFood')}</Text>
             </Pressable>
           )}
@@ -284,7 +288,7 @@ export default function SearchScreen() {
         />
         {isCustomFF && (
           <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, true)}>
-            <Ionicons name="trash" size={16} color={Colors.error} />
+            <Ionicons name="trash" size={16} color={colors.error} />
             <Text style={styles.deleteBtnText}>{t('search.deleteFastFood')}</Text>
           </Pressable>
         )}
@@ -300,13 +304,11 @@ export default function SearchScreen() {
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <Text style={styles.title}>{t('search.title')}</Text>
         <View style={styles.searchRow}>
-          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
           <TextInput
             style={styles.input}
-            placeholder={t('search.placeholder', {
-              tab: activeTab === 'restaurant' ? t('search.tabRestaurant') : t('search.tabFoods'),
-            })}
-            placeholderTextColor={Colors.textMuted}
+            placeholder={activeTab === 'foods' ? t('search.phFoods') : t('search.phRestaurant')}
+            placeholderTextColor={colors.textMuted}
             value={query}
             onChangeText={(q) => { setQuery(q); search(q); }}
             returnKeyType="search"
@@ -314,7 +316,7 @@ export default function SearchScreen() {
           />
           {query.length > 0 && (
             <Pressable onPress={() => { setQuery(''); clearResults(); search(''); }} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -322,15 +324,16 @@ export default function SearchScreen() {
         {/* Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll}>
           {TABS.map((tab) => (
-            <Pressable
+            <AnimatedPressable
               key={tab.key}
               style={[styles.tab, activeTab === tab.key && styles.tabActive]}
               onPress={() => setActiveTab(tab.key)}
+              scaleTo={0.95}
             >
               <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
                 {t(tab.labelKey)}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </ScrollView>
       </View>
@@ -338,19 +341,19 @@ export default function SearchScreen() {
       {/* Action Buttons */}
       <View style={styles.actionRow}>
         {activeTab === 'restaurant' ? (
-          <>
-            <Pressable style={styles.actionBtn} onPress={handleScanMenu}>
-              <Ionicons name="camera-outline" size={18} color={Colors.primary} />
-              <Text style={styles.actionBtnText}>{t('search.scanMenu')}</Text>
-            </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => { setNewItemRestaurant(''); setModalVisible(true); }}>
-              <Ionicons name="add-outline" size={18} color={Colors.primary} />
-              <Text style={styles.actionBtnText}>{t('search.addManually')}</Text>
-            </Pressable>
-          </>
+          <View style={styles.actionRow}>
+            <AnimatedPressable style={styles.actionBtn} onPress={handleScanMenu} scaleTo={0.97}>
+              <Ionicons name="scan" size={18} color={colors.primary} />
+              <Text style={styles.actionBtnText}>{t('search.scan')}</Text>
+            </AnimatedPressable>
+            <AnimatedPressable style={styles.actionBtn} onPress={() => setModalVisible(true)} scaleTo={0.97}>
+              <Ionicons name="add" size={18} color={colors.primary} />
+              <Text style={styles.actionBtnText}>{t('search.custom')}</Text>
+            </AnimatedPressable>
+          </View>
         ) : (
           <Pressable style={[styles.actionBtn, { flex: 1 }]} onPress={() => setModalVisible(true)}>
-            <Ionicons name="add-outline" size={18} color={Colors.primary} />
+            <Ionicons name="add-outline" size={18} color={colors.primary} />
             <Text style={styles.actionBtnText}>{t('search.addCustomFood')}</Text>
           </Pressable>
         )}
@@ -358,10 +361,10 @@ export default function SearchScreen() {
 
       {/* Results */}
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={styles.loader} size="large" />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       ) : dataArr.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="fast-food-outline" size={48} color={Colors.textMuted} />
+          <Ionicons name="fast-food-outline" size={48} color={colors.textMuted} />
           <Text style={styles.emptyText}>
             {activeTab === 'restaurant' ? t('search.noFastFood') : t('search.noResults')}
           </Text>
@@ -390,26 +393,26 @@ export default function SearchScreen() {
             </Text>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
               <Text style={styles.inputLabel}>{t('search.name')}</Text>
-              <TextInput style={styles.modalInput} placeholder={t('ph.exampleMenuItem')} placeholderTextColor={Colors.textMuted} value={newItemName} onChangeText={setNewItemName} />
+              <TextInput style={styles.modalInput} placeholder={t('ph.exampleMenuItem')} placeholderTextColor={colors.textMuted} value={newItemName} onChangeText={setNewItemName} />
 
               {activeTab === 'restaurant' && (
                 <>
                   <Text style={styles.inputLabel}>{t('search.restaurant')}</Text>
-                  <TextInput style={styles.modalInput} placeholder={t('ph.exampleRestaurant')} placeholderTextColor={Colors.textMuted} value={newItemRestaurant} onChangeText={setNewItemRestaurant} />
+                  <TextInput style={styles.modalInput} placeholder={t('ph.exampleRestaurant')} placeholderTextColor={colors.textMuted} value={newItemRestaurant} onChangeText={setNewItemRestaurant} />
                 </>
               )}
 
               <Text style={styles.inputLabel}>{t('macro.calories')}</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemCals} onChangeText={setNewItemCals} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={newItemCals} onChangeText={setNewItemCals} />
 
               <Text style={styles.inputLabel}>{t('macro.protein')} (g)</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemProtein} onChangeText={setNewItemProtein} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={newItemProtein} onChangeText={setNewItemProtein} />
 
               <Text style={styles.inputLabel}>{t('macro.carbs')} (g)</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemCarbs} onChangeText={setNewItemCarbs} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={newItemCarbs} onChangeText={setNewItemCarbs} />
 
               <Text style={styles.inputLabel}>{t('macro.fat')} (g)</Text>
-              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={Colors.textMuted} value={newItemFat} onChangeText={setNewItemFat} />
+              <TextInput style={styles.modalInput} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.textMuted} value={newItemFat} onChangeText={setNewItemFat} />
 
               <View style={styles.modalBtnRow}>
                 <Pressable style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
@@ -462,22 +465,20 @@ export default function SearchScreen() {
                         <>
                           <Text style={styles.portionText}>{t('search.servingSize', { grams: Math.round(portionG) })}</Text>
                           <View style={styles.detailMacrosGrid}>
-                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.primaryGlow }]}>
-                              <Text style={[styles.detailMacroVal, { color: Colors.calories }]}>{Math.round(macros.calories)}</Text>
+                            <View style={[styles.detailMacroCard, { backgroundColor: colors.primaryGlow }]}>
+                              <Text style={[styles.detailMacroVal, { color: colors.calories }]}>{Math.round(macros.calories)}</Text>
                               <Text style={styles.detailMacroLabel}>{t('macro.kcal')}</Text>
                             </View>
-                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.protein + '20' }]}>
-                              <Text style={[styles.detailMacroVal, { color: Colors.protein }]}>{Math.round(macros.protein)}g</Text>
-                              <Text style={styles.detailMacroLabel}>{t('macro.protein')}</Text>
-                            </View>
-                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.carbs + '20' }]}>
-                              <Text style={[styles.detailMacroVal, { color: Colors.carbs }]}>{Math.round(macros.carbs)}g</Text>
-                              <Text style={styles.detailMacroLabel}>{t('macro.carbs')}</Text>
-                            </View>
-                            <View style={[styles.detailMacroCard, { backgroundColor: Colors.fat + '20' }]}>
-                              <Text style={[styles.detailMacroVal, { color: Colors.fat }]}>{Math.round(macros.fat)}g</Text>
-                              <Text style={styles.detailMacroLabel}>{t('macro.fat')}</Text>
-                            </View>
+                            {[
+                              { key: 'c', label: t('macro.carbs'), val: macros.carbs, color: colors.carbs },
+                              { key: 'p', label: t('macro.protein'), val: macros.protein, color: colors.protein },
+                              { key: 'f', label: t('macro.fat'), val: macros.fat, color: colors.fat },
+                            ].map((m) => (
+                              <View key={m.key} style={[styles.detailMacroCard, { backgroundColor: m.color + '20' }]}>
+                                <Text style={[styles.detailMacroVal, { color: m.color }]}>{Math.round(m.val)}g</Text>
+                                <Text style={styles.detailMacroLabel}>{m.label}</Text>
+                              </View>
+                            ))}
                           </View>
                         </>
                       );
@@ -533,71 +534,71 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.bg,
+    backgroundColor: colors.bg,
     gap: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
-  title: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary },
+  title: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: colors.textPrimary },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.bgInput,
+    backgroundColor: colors.bgInput,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     paddingHorizontal: Spacing.md,
     height: 48,
     gap: 8,
   },
-  input: { flex: 1, color: Colors.textPrimary, fontSize: FontSize.md },
+  input: { flex: 1, color: colors.textPrimary, fontSize: FontSize.md },
   tabScroll: { flexGrow: 0 },
   tab: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: Radius.full,
     marginRight: 8,
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: colors.bgElevated,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   tabActive: {
-    backgroundColor: Colors.primaryGlow,
-    borderColor: Colors.primary,
+    backgroundColor: colors.primaryGlow,
+    borderColor: colors.primary,
   },
-  tabText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
-  tabTextActive: { color: Colors.primary, fontWeight: FontWeight.bold },
+  tabText: { fontSize: FontSize.sm, color: colors.textSecondary, fontWeight: FontWeight.medium },
+  tabTextActive: { color: colors.primary, fontWeight: FontWeight.bold },
   
   actionRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryGlow, paddingVertical: 10, borderRadius: Radius.md, gap: 6, borderWidth: 1, borderColor: Colors.primary },
-  actionBtnText: { color: Colors.primary, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryGlow, paddingVertical: 10, borderRadius: Radius.md, gap: 6, borderWidth: 1, borderColor: colors.primary },
+  actionBtnText: { color: colors.primary, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
 
   cardWrapper: { marginBottom: Spacing.md },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: -8, paddingRight: Spacing.md, gap: 4 },
-  deleteBtnText: { color: Colors.error, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  deleteBtnText: { color: colors.error, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
 
   loader: { marginTop: Spacing.xxl },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },
-  emptyText: { fontSize: FontSize.md, color: Colors.textSecondary },
+  emptyText: { fontSize: FontSize.md, color: colors.textSecondary },
   list: { padding: Spacing.lg },
 
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: Colors.bgCard, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, maxHeight: '80%' },
-  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.md },
+  modalContent: { backgroundColor: colors.bgCard, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.lg, maxHeight: '80%' },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.textPrimary, marginBottom: Spacing.md },
   modalScroll: { gap: Spacing.sm },
-  inputLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium, marginTop: 4 },
-  modalInput: { backgroundColor: Colors.bgInput, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, color: Colors.textPrimary, fontSize: FontSize.md },
+  inputLabel: { fontSize: FontSize.sm, color: colors.textSecondary, fontWeight: FontWeight.medium, marginTop: 4 },
+  modalInput: { backgroundColor: colors.bgInput, borderWidth: 1, borderColor: colors.border, borderRadius: Radius.md, padding: Spacing.md, color: colors.textPrimary, fontSize: FontSize.md },
   modalBtnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
-  modalCancelBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.bgElevated },
-  modalCancelText: { color: Colors.textPrimary, fontWeight: FontWeight.bold },
-  modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: Colors.primary },
-  modalSaveText: { color: Colors.textInverse, fontWeight: FontWeight.bold },
+  modalCancelBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: colors.bgElevated },
+  modalCancelText: { color: colors.textPrimary, fontWeight: FontWeight.bold },
+  modalSaveBtn: { flex: 1, padding: Spacing.md, borderRadius: Radius.md, alignItems: 'center', backgroundColor: colors.primary },
+  modalSaveText: { color: colors.textInverse, fontWeight: FontWeight.bold },
 
   // Details Modal Specific Styles
   detailRow: {
@@ -605,16 +606,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: colors.borderLight,
   },
   detailLabel: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   detailValue: {
     fontSize: FontSize.sm,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontWeight: FontWeight.semibold,
   },
   detailMacrosContainer: {
@@ -624,13 +625,13 @@ const styles = StyleSheet.create({
   detailSecTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   portionText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: -2,
   },
   detailMacrosGrid: {
@@ -651,14 +652,14 @@ const styles = StyleSheet.create({
   },
   detailMacroLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   ingredientsSection: {
     marginTop: Spacing.md,
   },
   ingredientsContainer: {
-    backgroundColor: Colors.bgElevated + '30',
+    backgroundColor: colors.bgElevated + '30',
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginTop: 6,
@@ -673,14 +674,14 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   ingredientText: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   ingredientQty: {
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
 });

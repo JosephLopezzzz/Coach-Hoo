@@ -1,11 +1,13 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, Pressable,
+  View, Text, StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, Radius } from '../constants/theme';
+import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import type { Food, Recipe, RestaurantFood } from '../types';
+import AnimatedPressable from './AnimatedPressable';
 
 type FoodCardItem =
   | { source: 'food';       data: Food }
@@ -20,7 +22,7 @@ interface FoodCardProps {
   allergenWarning?: string;
 }
 
-function MacroPill({ value, label, color }: { value: number; label: string; color: string }) {
+function MacroPill({ value, label, color, styles }: { value: number; label: string; color: string; styles: any }) {
   return (
     <View style={[styles.pill, { backgroundColor: `${color}20` }]}>
       <Text style={[styles.pillValue, { color }]}>{Math.round(value)}</Text>
@@ -31,13 +33,16 @@ function MacroPill({ value, label, color }: { value: number; label: string; colo
 
 export default function FoodCard({ item, onPress, onAdd, compact = false, allergenWarning }: FoodCardProps) {
   const { t } = useLanguage();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+
   let name = '';
   let calories = 0;
   let protein  = 0;
   let carbs    = 0;
   let fat      = 0;
   let badge    = '';
-  let badgeColor: string = Colors.primary;
+  let badgeColor: string = colors.primary;
 
   if (item.source === 'food') {
     const f = item.data as Food;
@@ -47,7 +52,7 @@ export default function FoodCard({ item, onPress, onAdd, compact = false, allerg
     carbs    = f.carbs_per_100g;
     fat      = f.fat_per_100g;
     badge    = f.is_raw ? t('card.per100gRaw') : t('card.per100g');
-    badgeColor = Colors.textMuted;
+    badgeColor = colors.textMuted;
   } else if (item.source === 'recipe') {
     const r = item.data as any;
     name     = r.name;
@@ -60,7 +65,7 @@ export default function FoodCard({ item, onPress, onAdd, compact = false, allerg
     badge    = isPortioned
       ? t('card.recipePortion', { country: r.country, grams: Math.round(r.macros_per_portion.portion_g) })
       : t('card.recipePer100g', { country: r.country });
-    badgeColor = Colors.accent;
+    badgeColor = colors.accent;
   } else {
     const rf = item.data as RestaurantFood;
     name     = rf.name;
@@ -69,14 +74,11 @@ export default function FoodCard({ item, onPress, onAdd, compact = false, allerg
     carbs    = rf.carbs;
     fat      = rf.fat;
     badge    = rf.restaurant_name;
-    badgeColor = Colors.warning;
+    badgeColor = colors.warning;
   }
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={onPress}
-    >
+    <AnimatedPressable onPress={onPress} style={styles.card}>
       <View style={styles.top}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
@@ -89,9 +91,9 @@ export default function FoodCard({ item, onPress, onAdd, compact = false, allerg
 
       {!compact && (
         <View style={styles.macros}>
-          <MacroPill value={protein} label="P" color={Colors.protein} />
-          <MacroPill value={carbs}   label="C" color={Colors.carbs} />
-          <MacroPill value={fat}     label="F" color={Colors.fat} />
+          <MacroPill value={protein} label="P" color={colors.protein} styles={styles} />
+          <MacroPill value={carbs}   label="C" color={colors.carbs} styles={styles} />
+          <MacroPill value={fat}     label="F" color={colors.fat} styles={styles} />
         </View>
       )}
 
@@ -102,27 +104,23 @@ export default function FoodCard({ item, onPress, onAdd, compact = false, allerg
         </View>
       ) : null}
 
-      {onAdd && (
-        <Pressable style={styles.addBtn} onPress={onAdd} hitSlop={8}>
-          <Ionicons name="add-circle" size={28} color={Colors.primary} />
-        </Pressable>
+      {onAdd && !compact && (
+        <AnimatedPressable onPress={onAdd} style={styles.addBtn} hitSlop={10} scaleTo={0.8} hapticStyle="Medium">
+          <Ionicons name="add-circle" size={28} color={colors.primary} />
+        </AnimatedPressable>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor: colors.bgCard,
     borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginBottom: Spacing.sm,
-  },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
   },
   top: {
     flexDirection: 'row',
@@ -138,7 +136,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   badge: {
     alignSelf: 'flex-start',
@@ -154,12 +152,12 @@ const styles = StyleSheet.create({
   calories: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    color: Colors.calories,
+    color: colors.calories,
   },
   kcal: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.regular,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   macros: {
     flexDirection: 'row',
@@ -170,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     alignSelf: 'flex-start',
-    backgroundColor: Colors.error,
+    backgroundColor: colors.error,
     borderRadius: Radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -197,7 +195,7 @@ const styles = StyleSheet.create({
   },
   pillLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   addBtn: {
     position: 'absolute',
