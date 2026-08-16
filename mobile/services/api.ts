@@ -376,12 +376,16 @@ export const mealsApi = {
     
     const processedItems = await Promise.all(payload.items.map(async (item) => {
       const macros = await calculateItemMacros(item);
+      const sourceType = item.type || item.source_type || 'manual';
+      const sourceId = item.id || item.source_id || ('src_' + Math.random().toString(36).substring(7));
+      const foodName = item.food_type || item.food_name || item.name || (await lookupFoodName(sourceType, sourceId)) || 'Food Item';
+
       return {
         id: 'mi_' + Math.random().toString(36).substring(7),
-        source_type: item.type,
-        source_id: item.id,
-        food_name: item.food_type || (await lookupFoodName(item.type, item.id)),
-        quantity_g: parseFloat(item.quantity_g),
+        source_type: sourceType,
+        source_id: sourceId,
+        food_name: foodName,
+        quantity_g: parseFloat(item.quantity_g) || 0,
         cooking_method: item.method || item.cooking_method || 'raw',
         with_bones: !!item.with_bones,
         bone_weight_g: item.bone_weight_g !== undefined ? parseFloat(item.bone_weight_g) : undefined,
@@ -391,6 +395,7 @@ export const mealsApi = {
         calculated_fat: macros.fat,
       };
     }));
+
 
     const newMeal = {
       id: 'm_' + Math.random().toString(36).substring(7),

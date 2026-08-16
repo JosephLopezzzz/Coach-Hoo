@@ -14,9 +14,12 @@ import { useTheme } from '../context/ThemeContext';
 import { getMealTypeLabel, getCookingMethodLabel } from '../constants/i18n';
 import AnimatedPressable from './AnimatedPressable';
 
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+if (Platform.OS === 'android' && typeof UIManager.setLayoutAnimationEnabledExperimental === 'function') {
+  try {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  } catch (_) {}
 }
+
 
 interface MealSectionProps {
   meal:       Meal;
