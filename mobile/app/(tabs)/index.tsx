@@ -33,13 +33,13 @@ function CalorieRing({
 }) {
   const { colors } = useTheme();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
-  const animVal = useRef(new Animated.Value(0)).current;
   const pct = target > 0 ? Math.min(consumed / target, 1) : 0;
+  const animVal = useRef(new Animated.Value(pct)).current;
 
   useEffect(() => {
     Animated.timing(animVal, {
       toValue: pct,
-      duration: 1000,
+      duration: 300,
       useNativeDriver: false,
     }).start();
   }, [pct]);
@@ -82,13 +82,17 @@ function CalorieRing({
         />
       </Svg>
       <View style={styles.ringCenter}>
-        <Text style={styles.ringCals}>{Math.round(consumed)}</Text>
+        <View style={styles.ringCalsRow}>
+          <Text style={styles.ringCals}>{Math.round(consumed).toLocaleString()}</Text>
+          <Text style={styles.ringTarget}> / {Math.round(target).toLocaleString()}</Text>
+        </View>
         <Text style={styles.ringLabel}>kcal</Text>
-        <Text style={styles.ringPct}>{Math.round(pct * 100)}%</Text>
+        <Text style={styles.ringPct}>{Math.round((target > 0 ? consumed / target : 0) * 100)}%</Text>
       </View>
     </View>
   );
 }
+
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -405,23 +409,35 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ringCalsRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
   ringCals: {
-    fontSize: FontSize.hero,
+    fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: colors.textPrimary,
-    lineHeight: 48,
+  },
+  ringTarget: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: colors.textMuted,
   },
   ringLabel: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.medium,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
     color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   ringPct: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: colors.calories,
     fontWeight: FontWeight.semibold,
     marginTop: 2,
   },
+
   macroTrio: {
     backgroundColor: colors.bgCard,
     borderRadius: Radius.lg,

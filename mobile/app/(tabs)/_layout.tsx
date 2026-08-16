@@ -57,6 +57,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="progress"
+        options={{ title: 'Progress', tabBarIcon: ({ focused }) => <TabIcon name="bar-chart" focused={focused} activeColor={colors.primary} inactiveColor={colors.textMuted} /> }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: t('tab.profile'), tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} activeColor={colors.primary} inactiveColor={colors.textMuted} /> }}
       />

@@ -9,6 +9,8 @@ import { ToastProvider } from '../context/ToastContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { Colors as DefaultColors, ThemeColors } from '../constants/theme';
 import { initDb } from '../services/db';
+import NetInfo from '@react-native-community/netinfo';
+import { processSyncQueue } from '../services/syncService';
 
 function RootLayoutNav() {
   const { isOnboarded, isLoading } = useAuth();
@@ -17,6 +19,15 @@ function RootLayoutNav() {
 
   useEffect(() => {
     initDb(); // Initialize SQLite DB and handle migration
+    
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && state.isInternetReachable) {
+        processSyncQueue((type, result) => {
+          console.log('Background sync processed:', type, result);
+        });
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {

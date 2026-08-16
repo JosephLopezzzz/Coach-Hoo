@@ -15,6 +15,8 @@ import { resetTutorial } from '../../components/DashboardTutorial';
 import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../../constants/theme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { useTheme } from '../../context/ThemeContext';
+import { getHealthSyncConfig, setHealthSyncEnabled, syncDailyTotalsToHealth, type HealthSyncConfig } from '../../services/healthSyncService';
+
 
 const LANGUAGE_OPTIONS: { key: Language; labelKey: StringKey; flag: string }[] = [
   { key: 'english',  labelKey: 'lang.english',  flag: '🇬🇧' },
@@ -49,6 +51,39 @@ export default function ProfileScreen() {
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [resetting, setResetting] = useState(false);
+  const [healthConfig, setHealthConfig] = useState<HealthSyncConfig | null>(null);
+  const [syncingHealth, setSyncingHealth] = useState(false);
+
+  React.useEffect(() => {
+    getHealthSyncConfig().then(setHealthConfig);
+  }, []);
+
+  const handleToggleHealthSync = async (val: boolean) => {
+    const ok = await setHealthSyncEnabled(val);
+    if (ok) {
+      const updated = await getHealthSyncConfig();
+      setHealthConfig(updated);
+    }
+  };
+
+  const handleManualHealthSync = async () => {
+    if (!user?.calories_target) return;
+    setSyncingHealth(true);
+    try {
+      await syncDailyTotalsToHealth({
+        calories: user.calories_target,
+        protein: user.protein_target || 0,
+        carbs: user.carbs_target || 0,
+        fat: user.fat_target || 0,
+      });
+      const updated = await getHealthSyncConfig();
+      setHealthConfig(updated);
+      Alert.alert('Health Sync', `Synced metrics to ${updated.platform}`);
+    } finally {
+      setSyncingHealth(false);
+    }
+  };
+
 
   const handleReset = async () => {
     if (Platform.OS === 'web') {
@@ -326,6 +361,43 @@ export default function ProfileScreen() {
           })}
         </View>
       </View>
+
+      {/* Native Health Sync */}
+      <View style={styles.card}>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1, paddingRight: Spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+              <Ionicons name="heart" size={18} color="#ef4444" />
+              <Text style={styles.cardTitle}>Native Health Sync</Text>
+            </View>
+            <Text style={styles.langHint}>
+              Sync logged calories & macros to {healthConfig?.platform || 'Health Dashboard'} automatically.
+            </Text>
+          </View>
+          <Switch
+            value={healthConfig?.enabled ?? false}
+            onValueChange={handleToggleHealthSync}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+
+        {healthConfig?.enabled && (
+          <View style={{ marginTop: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: FontSize.xs, color: colors.textMuted }}>
+              Last Synced: {healthConfig.lastSyncedAt ? new Date(healthConfig.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+            </Text>
+            <AnimatedPressable
+              style={{ backgroundColor: colors.primaryGlow, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.sm, borderWidth: 1, borderColor: colors.primary }}
+              onPress={handleManualHealthSync}
+            >
+              <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.primary }}>
+                {syncingHealth ? 'Syncing...' : 'Sync Now'}
+              </Text>
+            </AnimatedPressable>
+          </View>
+        )}
+      </View>
+
 
       {/* BMI snapshot */}
       {user.height_cm && user.weight_kg && (

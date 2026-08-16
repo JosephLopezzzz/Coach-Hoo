@@ -504,6 +504,81 @@ export const mealsApi = {
     }
     return { data: { success: true } };
   },
+
+  history: async (days: number = 7) => {
+    const db = getDb();
+    const isWeb = !db;
+    
+    const dates: string[] = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dates.push(getLocalDateString(d));
+    }
+
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const result: {
+      date: string;
+      dayLabel: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    }[] = [];
+
+    for (const dateStr of dates) {
+      const dObj = new Date(dateStr + 'T00:00:00');
+      const label = dayLabels[dObj.getDay()];
+
+      let dayTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+      if (isWeb) {
+        const meals = await getLocalMeals();
+        const filtered = meals.filter((m: any) => m.logged_date === dateStr);
+        filtered.forEach((m: any) => {
+          m.items?.forEach((it: any) => {
+            dayTotals.calories += it.calculated_calories || 0;
+            dayTotals.protein += it.calculated_protein || 0;
+            dayTotals.carbs += it.calculated_carbs || 0;
+            dayTotals.fat += it.calculated_fat || 0;
+          });
+        });
+      } else {
+        const rows = db.getAllSync<{
+          cals: number;
+          prot: number;
+          carbs: number;
+          fat: number;
+        }>(
+          `SELECT 
+            SUM(mi.calculated_calories) as cals,
+            SUM(mi.calculated_protein) as prot,
+            SUM(mi.calculated_carbs) as carbs,
+            SUM(mi.calculated_fat) as fat
+           FROM meals m
+           JOIN meal_items mi ON m.id = mi.meal_id
+           WHERE m.logged_date = ?`,
+          [dateStr]
+        );
+        if (rows && rows.length > 0 && rows[0].cals !== null) {
+          dayTotals.calories = Math.round(rows[0].cals || 0);
+          dayTotals.protein = Math.round(rows[0].prot || 0);
+          dayTotals.carbs = Math.round(rows[0].carbs || 0);
+          dayTotals.fat = Math.round(rows[0].fat || 0);
+        }
+      }
+
+      result.push({
+        date: dateStr,
+        dayLabel: label,
+        ...dayTotals,
+      });
+    }
+
+    return { data: result };
+  },
 };
 
 export const calculateApi = {

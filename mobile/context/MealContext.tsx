@@ -7,6 +7,9 @@ import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useToast } from './ToastContext';
 import { getMealTypeLabel } from '../constants/i18n';
+import { syncMealToHealth } from '../services/healthSyncService';
+import { initNetworkSyncListener, processSyncQueue } from '../services/syncService';
+import { initDb } from '../services/db';
 
 interface MealContextType {
   meals:      Meal[];
@@ -32,6 +35,19 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
   const [targets,   setTargets]   = useState<DailyTargets | null>(null);
   const [remaining, setRemaining] = useState<MacroResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Initialize SQLite database and sync queue processing
+  useEffect(() => {
+    initDb().then(() => {
+      processSyncQueue();
+    });
+    const unsubscribe = initNetworkSyncListener(() => {
+      loadToday();
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
 
   const loadToday = useCallback(async (date?: string) => {
     if (!isOnboarded) return;
@@ -59,8 +75,20 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
     items: LogItem[],
     notes?: string,
   ) => {
-    await mealsApi.log({ meal_type, items, notes });
+    const res = await mealsApi.log({ meal_type, items, notes });
     await loadToday(); // refresh after log
+
+    // Attempt Native Health Sync
+    if (res?.data) {
+      let calories = 0, protein = 0, carbs = 0, fat = 0;
+      (res.data.items || []).forEach((it: any) => {
+        calories += it.calculated_calories || 0;
+        protein += it.calculated_protein || 0;
+        carbs += it.calculated_carbs || 0;
+        fat += it.calculated_fat || 0;
+      });
+      syncMealToHealth({ meal_type, calories, protein, carbs, fat, logged_date: res.data.logged_date });
+    }
 
     // Trigger meal logged notification toast for all logging events
     const mealLabel = getMealTypeLabel(lang, meal_type);
@@ -80,6 +108,7 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
     await mealsApi.delete(id);
     await loadToday();
   }, [loadToday]);
+
 
   return (
     <MealContext.Provider value={{

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 import { Colors, FontSize, FontWeight } from "../constants/theme";
 
 interface MacroRingProps {
@@ -30,13 +30,14 @@ function RingSegment({
   strokeWidth: number;
   offset: number;
 }) {
-  const animVal = useRef(new Animated.Value(0)).current;
+  const initialVal = Math.min(Math.max(progress, 0), 1);
+  const animVal = useRef(new Animated.Value(initialVal)).current;
 
   useEffect(() => {
     Animated.timing(animVal, {
-      toValue: Math.min(progress, 1),
-      duration: 900,
-      delay: offset * 150,
+      toValue: Math.min(Math.max(progress, 0), 1),
+      duration: 300,
+      delay: offset * 30,
       useNativeDriver: false,
     }).start();
   }, [progress]);
@@ -82,7 +83,6 @@ export default function MacroRing({
   const strokeWidth = 12;
   const gap = strokeWidth + 4;
 
-  // 3 rings: protein (outer), carbs (mid), fat (inner)
   const rings = [
     {
       macro: "Protein",
@@ -147,15 +147,18 @@ export default function MacroRing({
           })}
         </Svg>
 
-        {/* Center content */}
+        {/* Center content showing consumed / limit */}
         <View style={styles.center}>
-          <Text style={styles.calValue}>{Math.round(calories)}</Text>
+          <View style={styles.calRow}>
+            <Text style={styles.calValue}>{Math.round(calories).toLocaleString()}</Text>
+            <Text style={styles.calTarget}> / {Math.round(caloriesTarget).toLocaleString()}</Text>
+          </View>
           <Text style={styles.calLabel}>kcal</Text>
           <Text style={styles.calPct}>{calPct}%</Text>
         </View>
       </View>
 
-      {/* Legend — outside the fixed container so it never clips */}
+      {/* Legend */}
       <View style={styles.legend}>
         {rings.map(({ macro, consumed, target, color }) => (
           <View key={macro} style={styles.legendItem}>
@@ -189,16 +192,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  calRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
   calValue: {
-    fontSize: FontSize.xxxl,
+    fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: Colors.textPrimary,
-    lineHeight: 38,
+  },
+  calTarget: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
   },
   calLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
     color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   calPct: {
     fontSize: FontSize.xs,
@@ -235,3 +249,4 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.regular,
   },
 });
+
