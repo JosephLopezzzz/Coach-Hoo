@@ -30,6 +30,7 @@ export function useCoachMessage(
   totals: MacroResult,
   targets: DailyTargets | null,
   lang: Language = 'english',
+  currentStreak: number = 0,
 ): CoachMessageResult {
   const name = userName?.split(' ')[0] || t(lang, 'coach.friend');
   const hour = new Date().getHours();
@@ -42,6 +43,25 @@ export function useCoachMessage(
       message: t(lang, 'coach.lateNight'),
       messageType: 'late-night',
     };
+  }
+
+  // Streak milestone shout-outs (checked once per session via meals.length > 0)
+  if (currentStreak > 0 && meals.length > 0) {
+    const milestones = [30, 14, 7, 3];
+    const hit = milestones.find(m => currentStreak === m);
+    if (hit) {
+      const streakMessages: Record<number, string> = {
+        3:  `${name}, 3 days in a row 🔥 You\'re building momentum!`,
+        7:  `One full week streak, ${name}! That\'s real dedication 🏆`,
+        14: `Two weeks strong, ${name}! You\'re on fire 🔥🔥`,
+        30: `A MONTH of streaks, ${name}?! You\'re unstoppable! 🔥🔥🔥`,
+      };
+      return {
+        greeting,
+        message: streakMessages[hit],
+        messageType: 'celebration',
+      };
+    }
   }
 
   if (!meals || meals.length === 0) {

@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, RefreshControl, Pressable } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { ThemeColors, FontSize, FontWeight, Spacing, Radius } from '../../constants/theme';
@@ -7,6 +7,12 @@ import { LineChart, BarChart } from 'react-native-chart-kit';
 import { mealsApi } from '../../services/api';
 import { useMeals } from '../../context/MealContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useStreak } from '../../hooks/useStreak';
+import {
+  getQualityColor, getLevelGradient, getLevelEmoji,
+  STREAK_MILESTONES, getNextMilestone,
+} from '../../services/streakService';
+import type { StreakDayEntry } from '../../types';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -15,8 +21,14 @@ type Timeframe = 7 | 14 | 30;
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { targets } = useMeals();
+  const { targets, meals } = useMeals();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const { streakInfo, isLoading: streakLoading } = useStreak(meals, targets);
+
+  // ── Calendar navigation ───────────────────────────────────────────────────
+  const today = new Date();
+  const [calYear,  setCalYear]  = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth()); // 0-indexed
 
   const [timeframe, setTimeframe] = useState<Timeframe>(7);
   const [loading, setLoading] = useState(true);
@@ -30,6 +42,34 @@ export default function ProgressScreen() {
   }[]>([]);
 
   const targetCalories = targets?.calories_target || 2000;
+
+  // ── Streak calendar grid builder ──────────────────────────────────────────
+  const calendarGrid = useMemo(() => {
+    // Build a lookup from calendarData
+    const qualityMap: Record<string, StreakDayEntry> = {};
+    for (const entry of streakInfo.calendarData) {
+      qualityMap[entry.date] = entry;
+    }
+
+    // First day of the displayed month
+    const firstDay = new Date(calYear, calMonth, 1);
+    const startDow = firstDay.getDay(); // 0=Sun
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    // Pad with nulls before the 1st
+    const cells: (StreakDayEntry | null)[] = Array(startDow).fill(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mm = String(calMonth + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      const dateStr = `${calYear}-${mm}-${dd}`;
+      cells.push(qualityMap[dateStr] ?? { date: dateStr, quality: 0, calories: 0 });
+    }
+    return cells;
+  }, [streakInfo.calendarData, calYear, calMonth]);
+
+  const calMonthLabel = new Date(calYear, calMonth, 1).toLocaleDateString('en-PH', {
+    month: 'long', year: 'numeric',
+  });
 
   const loadHistory = useCallback(async (days: Timeframe) => {
     setLoading(true);
@@ -196,6 +236,29 @@ export default function ProgressScreen() {
           />
         }
       >
+        {/* ── Streak Hero Card ─────────────────────────────────────────────── */}
+        <StreakHeroCard
+          streakInfo={streakInfo}
+          calendarGrid={calendarGrid}
+          calMonthLabel={calMonthLabel}
+          calYear={calYear}
+          calMonth={calMonth}
+          onPrevMonth={() => {
+            if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
+            else setCalMonth(m => m - 1);
+          }}
+          onNextMonth={() => {
+            const now = new Date();
+            const isCurrentMonth = calYear === now.getFullYear() && calMonth === now.getMonth();
+            if (!isCurrentMonth) {
+              if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); }
+              else setCalMonth(m => m + 1);
+            }
+          }}
+          colors={colors}
+          styles={styles}
+        />
+
         {/* KPI Grid */}
         <View style={styles.kpiGrid}>
           <View style={styles.kpiCard}>
@@ -299,6 +362,237 @@ export default function ProgressScreen() {
           </View>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+// ─── StreakHeroCard ───────────────────────────────────────────────────────────
+
+const DAY_HEADERS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+function StreakHeroCard({
+  streakInfo,
+  calendarGrid,
+  calMonthLabel,
+  calYear,
+  calMonth,
+  onPrevMonth,
+  onNextMonth,
+  colors,
+  styles,
+}: {
+  streakInfo: any;
+  calendarGrid: any[];
+  calMonthLabel: string;
+  calYear: number;
+  calMonth: number;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  colors: ThemeColors;
+  styles: any;
+}) {
+  const [from, to] = getLevelGradient(streakInfo.currentLevel);
+  const flameEmoji = getLevelEmoji(streakInfo.currentLevel);
+
+  // Pulse animation for flame
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.15, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const now = new Date();
+  const isCurrentMonth = calYear === now.getFullYear() && calMonth === now.getMonth();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+  const nextMilestone = getNextMilestone(streakInfo.currentStreak);
+  const prevMilestone = STREAK_MILESTONES.slice().reverse().find(m => m.days <= streakInfo.currentStreak);
+
+  // Milestone progress bar
+  const milestoneFrom = prevMilestone?.days ?? 0;
+  const milestoneTo   = nextMilestone?.days ?? (milestoneFrom + 1);
+  const milestonePct  = Math.min(
+    (streakInfo.currentStreak - milestoneFrom) / Math.max(milestoneTo - milestoneFrom, 1),
+    1,
+  );
+
+  // Calendar rows (7 cells each)
+  const weeks: (any | null)[][] = [];
+  for (let i = 0; i < calendarGrid.length; i += 7) {
+    weeks.push(calendarGrid.slice(i, i + 7));
+  }
+
+  const levelSubtitle: Record<string, string> = {
+    Spark:   'Log your first streak day!',
+    Glow:    'You\'re warming up! Keep going 🔥',
+    Blaze:   'A full week streak — blazing! 🔥',
+    Ignite:  'Two weeks strong — you\'re on fire!',
+    Inferno: 'Unstoppable! You\'re an Inferno! 🔥',
+  };
+
+  return (
+    <View style={styles.streakCard}>
+      {/* Hero gradient banner */}
+      <View style={[styles.streakHero, { backgroundColor: from }]}>
+        <View style={[styles.streakHeroOverlay, { backgroundColor: to }]} />
+        <View style={styles.streakHeroContent}>
+          <View style={styles.streakLevelBadge}>
+            <Text style={styles.streakLevelBadgeText}>{streakInfo.levelName.toUpperCase()}</Text>
+          </View>
+          <Animated.Text style={[styles.streakHeroFlame, { transform: [{ scale: pulse }] }]}>
+            {flameEmoji}
+          </Animated.Text>
+          <Text style={styles.streakHeroCount}>{streakInfo.currentStreak}</Text>
+          <Text style={styles.streakHeroDayLabel}>day streak!</Text>
+          <Text style={styles.streakHeroSubtitle}>{levelSubtitle[streakInfo.levelName]}</Text>
+        </View>
+      </View>
+
+      {/* Calendar section */}
+      <View style={styles.streakCalSection}>
+        {/* Month navigation */}
+        <View style={styles.streakCalNav}>
+          <Text style={styles.streakCalMonth}>{calMonthLabel}</Text>
+          <View style={styles.streakCalNavBtns}>
+            <Pressable onPress={onPrevMonth} style={styles.streakNavBtn}>
+              <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
+            </Pressable>
+            <Pressable
+              onPress={onNextMonth}
+              style={[styles.streakNavBtn, isCurrentMonth && styles.streakNavBtnDisabled]}
+              disabled={isCurrentMonth}
+            >
+              <Ionicons name="chevron-forward" size={18}
+                color={isCurrentMonth ? colors.textMuted : colors.textSecondary} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Day-of-week headers */}
+        <View style={styles.streakDowRow}>
+          {DAY_HEADERS.map(h => (
+            <Text key={h} style={styles.streakDowLabel}>{h}</Text>
+          ))}
+        </View>
+
+        {/* Calendar rows */}
+        {weeks.map((week, wIdx) => {
+          // Detect streak run within this week for pill rendering
+          const runStart = week.findIndex(c => c && c.quality >= 2);
+          const runEnd   = week.reduce((last, c, i) => (c && c.quality >= 2 ? i : last), -1);
+          const hasRun   = runStart !== -1 && runEnd >= runStart;
+
+          return (
+            <View key={wIdx} style={styles.streakWeekRow}>
+              {/* Streak pill highlight behind cells */}
+              {hasRun && (
+                <View
+                  style={[
+                    styles.streakPill,
+                    {
+                      left:  runStart * (36 + 4),
+                      right: (6 - runEnd) * (36 + 4),
+                      backgroundColor: '#E8A25440',
+                    },
+                  ]}
+                />
+              )}
+              {week.map((cell, cIdx) => {
+                if (!cell) return <View key={cIdx} style={styles.streakDayEmpty} />;
+                const isToday = cell.date === todayStr;
+                const isFuture = cell.date > todayStr;
+                const dotColor = getQualityColor(cell.quality);
+                const dayNum = parseInt(cell.date.split('-')[2], 10);
+                return (
+                  <View
+                    key={cell.date}
+                    style={[
+                      styles.streakDayCell,
+                      isToday && { borderWidth: 2, borderColor: colors.primary },
+                    ]}
+                  >
+                    {!isFuture && cell.quality > 0 ? (
+                      <View style={[styles.streakDayFill, { backgroundColor: dotColor }]}>
+                        <Text style={styles.streakDayNumFilled}>{dayNum}</Text>
+                        {cell.quality >= 2 && (
+                          <Text style={styles.streakDayEmoji}>
+                            {cell.quality === 3 ? '🔥' : '🟠'}
+                          </Text>
+                        )}
+                      </View>
+                    ) : (
+                      <Text style={[
+                        styles.streakDayNumEmpty,
+                        isFuture && { color: colors.textMuted },
+                        isToday && { color: colors.primary, fontWeight: FontWeight.bold },
+                      ]}>{dayNum}</Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })}
+
+        {/* Stats row */}
+        <View style={styles.streakStatsRow}>
+          <View style={styles.streakStatItem}>
+            <Text style={styles.streakStatLabel}>Streak started</Text>
+            <Text style={styles.streakStatValue}>
+              {streakInfo.streakStartDate
+                ? new Date(streakInfo.streakStartDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '—'}
+            </Text>
+          </View>
+          <View style={styles.streakStatDivider} />
+          <View style={styles.streakStatItem}>
+            <Text style={styles.streakStatLabel}>Best streak</Text>
+            <Text style={styles.streakStatValue}>{streakInfo.longestStreak} days</Text>
+          </View>
+        </View>
+
+        {/* Milestone progress */}
+        {nextMilestone && (
+          <View style={styles.streakMilestoneBox}>
+            <View style={styles.streakMilestoneHeader}>
+              <Ionicons name={nextMilestone.icon as any} size={16} color="#E8A254" />
+              <Text style={styles.streakMilestoneTitle}>Next: {nextMilestone.label}</Text>
+              <Text style={styles.streakMilestoneDay}>
+                Day {streakInfo.currentStreak} of {nextMilestone.days}
+              </Text>
+            </View>
+            <View style={styles.streakMilestoneTrack}>
+              <View style={[
+                styles.streakMilestoneFill,
+                { width: `${Math.round(milestonePct * 100)}%` },
+              ]} />
+            </View>
+          </View>
+        )}
+
+        {/* Legend */}
+        <View style={styles.streakLegendRow}>
+          {[
+            { color: '#E8A254', label: 'Perfect' },
+            { color: '#FFA76C', label: 'Close'   },
+            { color: '#B0B0B0', label: 'Logged'  },
+            { color: 'transparent', label: 'Missed', border: true },
+          ].map(item => (
+            <View key={item.label} style={styles.streakLegendItem}>
+              <View style={[
+                styles.streakLegendDot,
+                { backgroundColor: item.color },
+                item.border && { borderWidth: 1.5, borderColor: colors.border },
+              ]} />
+              <Text style={styles.streakLegendLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -459,5 +753,244 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     color: colors.textPrimary,
+  },
+
+  // ── StreakHeroCard ────────────────────────────────────────────────────────
+  streakCard: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+  },
+  streakHero: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  streakHeroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    opacity: 0.5,
+    borderTopLeftRadius: 80,
+    borderTopRightRadius: 80,
+  },
+  streakHeroContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakLevelBadge: {
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    marginBottom: Spacing.xs,
+  },
+  streakLevelBadgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.extrabold,
+    color: '#fff',
+    letterSpacing: 1.5,
+  },
+  streakHeroFlame: {
+    fontSize: 56,
+    lineHeight: 70,
+  },
+  streakHeroCount: {
+    fontSize: 52,
+    fontWeight: FontWeight.extrabold,
+    color: '#fff',
+    lineHeight: 60,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  streakHeroDayLabel: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
+  },
+  streakHeroSubtitle: {
+    fontSize: FontSize.sm,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  // Calendar
+  streakCalSection: {
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  streakCalNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  streakCalMonth: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: colors.textPrimary,
+  },
+  streakCalNavBtns: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  streakNavBtn: {
+    padding: 6,
+    borderRadius: Radius.sm,
+    backgroundColor: colors.bgElevated,
+  },
+  streakNavBtnDisabled: {
+    opacity: 0.35,
+  },
+  streakDowRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 2,
+  },
+  streakDowLabel: {
+    width: 36,
+    textAlign: 'center',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: colors.textMuted,
+  },
+  streakWeekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    position: 'relative',
+    marginVertical: 2,
+  },
+  streakPill: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    borderRadius: 20,
+  },
+  streakDayEmpty: {
+    width: 36,
+    height: 36,
+  },
+  streakDayCell: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  streakDayFill: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakDayNumFilled: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
+    color: '#fff',
+    lineHeight: 13,
+  },
+  streakDayEmoji: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+  streakDayNumEmpty: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  // Stats row
+  streakStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgElevated,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  streakStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  streakStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.border,
+  },
+  streakStatLabel: {
+    fontSize: FontSize.xs,
+    color: colors.textMuted,
+    fontWeight: FontWeight.medium,
+  },
+  streakStatValue: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: colors.textPrimary,
+  },
+  // Milestone
+  streakMilestoneBox: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  streakMilestoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  streakMilestoneTitle: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  streakMilestoneDay: {
+    fontSize: FontSize.xs,
+    color: colors.textMuted,
+  },
+  streakMilestoneTrack: {
+    height: 8,
+    borderRadius: Radius.full,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  streakMilestoneFill: {
+    height: '100%',
+    borderRadius: Radius.full,
+    backgroundColor: '#E8A254',
+  },
+  // Legend
+  streakLegendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.xs,
+    flexWrap: 'wrap',
+  },
+  streakLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  streakLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  streakLegendLabel: {
+    fontSize: FontSize.xs,
+    color: colors.textMuted,
+    fontWeight: FontWeight.medium,
   },
 });

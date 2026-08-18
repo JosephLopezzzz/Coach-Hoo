@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  RefreshControl, Animated,
+  RefreshControl, Animated, TouchableOpacity,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
@@ -17,6 +17,8 @@ import DashboardTutorial, {
   isTutorialComplete,
 } from '../../components/DashboardTutorial';
 import { useCoachMessage } from '../../hooks/useCoachMessage';
+import { useStreak } from '../../hooks/useStreak';
+import { getQualityColor, getLevelEmoji } from '../../services/streakService';
 import { Colors as StaticColors, FontSize, FontWeight, Spacing, Radius, MEAL_TYPES, ThemeColors } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -101,9 +103,23 @@ export default function DashboardScreen() {
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const { meals, totals, targets, remaining, isLoading, loadToday, deleteMeal } = useMeals();
+  const { streakInfo } = useStreak(meals, targets);
   const [showTutorial, setShowTutorial] = useState(false);
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
   const prevMealCount = useRef(meals.length);
+
+  // Streak chip pulse animation
+  const streakPulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (streakInfo.currentStreak > 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(streakPulse, { toValue: 1.12, duration: 900, useNativeDriver: true }),
+          Animated.timing(streakPulse, { toValue: 1,    duration: 900, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [streakInfo.currentStreak]);
 
   const fabRef = useRef<View>(null);
   const trackerRef = useRef<View>(null);
@@ -116,6 +132,7 @@ export default function DashboardScreen() {
     totals,
     targets,
     lang,
+    streakInfo.currentStreak,
   );
 
   const coachCardAnim = useRef(new Animated.Value(0)).current;
@@ -159,11 +176,15 @@ export default function DashboardScreen() {
   const carbsTarget = targets?.carbs_target ?? 200;
   const fatTarget = targets?.fat_target ?? 65;
 
+  // Date string for inside the chat bubble
   const today = new Date().toLocaleDateString(lang === 'filipino' ? 'fil-PH' : 'en-PH', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
+
+  // First name only for the bubble greeting
+  const firstName = user?.full_name?.split(' ')[0] ?? 'there';
 
   return (
     <View style={styles.root}>
@@ -188,16 +209,25 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Transparent Header Section */}
+        {/* Header */}
         <View style={[styles.headerWrapper, { paddingTop: insets.top + Spacing.lg }]}>
           <View style={styles.header}>
-            <View>
-              <Text style={styles.date}>{today}</Text>
-              <Text style={styles.greeting}>{coach.greeting}</Text>
-            </View>
+            {/* NOKMA brand title */}
+            <Text style={styles.nokmaTitle}>NOKMA</Text>
+            {/* Streak chip */}
+            <TouchableOpacity
+              style={styles.streakChip}
+              onPress={() => router.push('/(tabs)/progress')}
+              activeOpacity={0.8}
+            >
+              <Animated.Text style={[styles.streakChipEmoji, { transform: [{ scale: streakPulse }] }]}>
+                {getLevelEmoji(streakInfo.currentLevel)}
+              </Animated.Text>
+              <Text style={styles.streakChipCount}>{streakInfo.currentStreak}</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Coach Guide — mascot + speech bubble */}
+          {/* Coach Guide — mascot + speech bubble with greeting + date inside */}
           <View ref={coachRef}>
             <Animated.View
               style={{
@@ -212,7 +242,12 @@ export default function DashboardScreen() {
                 ],
               }}
             >
-              <CoachGuide message={displayMessage} visible />
+              <CoachGuide
+                message={displayMessage}
+                visible
+                greeting={`${coach.greeting.replace(/,.*$/, '')}, ${firstName}!`}
+                date={today}
+              />
             </Animated.View>
           </View>
         </View>
@@ -224,6 +259,42 @@ export default function DashboardScreen() {
             <View style={styles.ringCard}>
               <CalorieRing consumed={totals.calories} target={caloriesTarget} />
             </View>
+
+            {/* 7-day mini streak heatmap */}
+            {streakInfo.weekHeatmap.length > 0 && (
+              <View style={styles.miniHeatmapRow}>
+                {streakInfo.weekHeatmap.map((entry, idx) => {
+                  const dotColor = getQualityColor(entry.quality);
+                  const isToday = idx === streakInfo.weekHeatmap.length - 1;
+                  const dayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+                  const dayObj = new Date(entry.date + 'T00:00:00');
+                  const dayLabel = dayLabels[dayObj.getDay()];
+                  return (
+                    <View key={entry.date} style={styles.miniHeatmapCell}>
+                      <Text style={[
+                        styles.miniHeatmapDayLabel,
+                        isToday && { color: colors.primary, fontWeight: FontWeight.bold },
+                      ]}>{dayLabel}</Text>
+                      <View style={[
+                        styles.miniHeatmapDot,
+                        {
+                          backgroundColor: entry.quality > 0 ? dotColor : 'transparent',
+                          borderColor: entry.quality > 0 ? dotColor : colors.border,
+                          borderWidth: 1.5,
+                        },
+                        isToday && { borderColor: colors.primary, borderWidth: 2 },
+                      ]}>
+                        {entry.quality >= 2 && (
+                          <Text style={styles.miniHeatmapEmoji}>
+                            {entry.quality === 3 ? '🔥' : '🟠'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
             {/* Slim macro trio bars */}
             <View style={styles.macroTrio}>
@@ -353,6 +424,55 @@ export default function DashboardScreen() {
 
 const getStyles = (colors: ThemeColors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  // ── Streak chip (header) ──────────────────────────────────────────────────
+  streakChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(232,162,84,0.18)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: '#E8A254',
+  },
+  streakChipEmoji: {
+    fontSize: 18,
+  },
+  streakChipCount: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.extrabold,
+    color: '#E8A254',
+  },
+  // ── 7-day mini heatmap ────────────────────────────────────────────────────
+  miniHeatmapRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
+  miniHeatmapCell: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  miniHeatmapDayLabel: {
+    fontSize: 9,
+    color: colors.textMuted,
+    fontWeight: FontWeight.medium,
+    textTransform: 'uppercase',
+  },
+  miniHeatmapDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniHeatmapEmoji: {
+    fontSize: 14,
+  },
   bgImage: {
     position: 'absolute',
     top: 0,
@@ -387,16 +507,11 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  date: {
-    fontSize: FontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-  greeting: {
+  nokmaTitle: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: colors.textPrimary,
+    letterSpacing: 2,
   },
   ringCard: {
     backgroundColor: 'transparent',

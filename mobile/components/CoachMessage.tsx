@@ -6,9 +6,11 @@ interface CoachMessageProps {
   message: string;
   visible: boolean;
   tailTop?: number;
+  greeting?: string;   // e.g. "Good evening, Joseph!"
+  date?: string;       // e.g. "Tuesday, August 18"
 }
 
-export default function CoachMessage({ message, visible, tailTop }: CoachMessageProps) {
+export default function CoachMessage({ message, visible, tailTop, greeting, date }: CoachMessageProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,7 +46,15 @@ export default function CoachMessage({ message, visible, tailTop }: CoachMessage
       ]}
     >
       <View style={[styles.tail, { top: tailTop ?? 42 }]} />
+      {/* Greeting header — user name + salutation */}
+      {greeting ? (
+        <Text style={styles.greeting}>{greeting}</Text>
+      ) : null}
       <Text style={styles.message}>{message}</Text>
+      {/* Date footer */}
+      {date ? (
+        <Text style={styles.dateFooter}>{date}</Text>
+      ) : null}
     </Animated.View>
   );
 }
@@ -57,8 +67,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
     marginLeft: 4,
+    gap: 4,
   },
   tail: {
     position: 'absolute',
@@ -72,10 +84,24 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     transform: [{ rotate: '45deg' }],
   },
+  greeting: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
+    marginBottom: 2,
+  },
   message: {
     fontSize: FontSize.md,
     color: Colors.textPrimary,
     fontWeight: FontWeight.medium,
     lineHeight: 22,
+  },
+  dateFooter: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.medium,
+    textAlign: 'right',
+    marginTop: 6,
+    opacity: 0.7,
   },
 });

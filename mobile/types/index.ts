@@ -190,3 +190,32 @@ export interface RegisterPayload {
   activity_level?: number;
   country?: string;
 }
+
+// ─── Streak Types ─────────────────────────────────────────────────────────────
+
+/**
+ * 0 = Missed      — no meals logged; breaks the streak
+ * 1 = Logged      — meals logged but far from target; neutral (streak stays alive but doesn't grow)
+ * 2 = Close       — within -500/+300 kcal of target; streak grows
+ * 3 = Perfect     — within ±150 kcal of target; streak grows
+ */
+export type DayQuality = 0 | 1 | 2 | 3;
+
+export interface StreakDayEntry {
+  date: string;        // 'YYYY-MM-DD'
+  quality: DayQuality;
+  calories: number;
+}
+
+export type StreakLevelName = 'Spark' | 'Glow' | 'Blaze' | 'Ignite' | 'Inferno';
+
+export interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  streakStartDate: string | null;   // ISO date string
+  currentLevel: 1 | 2 | 3 | 4 | 5; // 1=Spark … 5=Inferno
+  levelName: StreakLevelName;
+  weekHeatmap: StreakDayEntry[];    // last 7 days (oldest → today)
+  calendarData: StreakDayEntry[];   // last 90 days for full calendar view
+}
+

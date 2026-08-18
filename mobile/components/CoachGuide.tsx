@@ -11,9 +11,11 @@ const SCREEN_WIDTH_FACTOR = 0.33;
 interface CoachGuideProps {
   message: string;
   visible: boolean;
+  greeting?: string;
+  date?: string;
 }
 
-function CoachGuide({ message, visible }: CoachGuideProps) {
+function CoachGuide({ message, visible, greeting, date }: CoachGuideProps) {
   const { width } = useWindowDimensions();
 
   const mascotSize = useMemo(
@@ -34,7 +36,7 @@ function CoachGuide({ message, visible }: CoachGuideProps) {
           cachePolicy="memory-disk"
         />
       </View>
-      <CoachMessage message={message} visible={visible} tailTop={tailTop} />
+      <CoachMessage message={message} visible={visible} tailTop={tailTop} greeting={greeting} date={date} />
     </View>
   );
 }
