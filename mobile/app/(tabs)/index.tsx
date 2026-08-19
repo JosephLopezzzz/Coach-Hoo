@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   RefreshControl, Animated, TouchableOpacity,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -23,6 +24,9 @@ import { Colors as StaticColors, FontSize, FontWeight, Spacing, Radius, MEAL_TYP
 import { useTheme } from '../../context/ThemeContext';
 
 const CONFIRMATION_DURATION = 3000;
+
+// IMPORTANT: Create animated component ONCE at module scope — not inside render
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 function CalorieRing({
   consumed,
@@ -52,7 +56,6 @@ function CalorieRing({
   const cx = size / 2;
   const cy = size / 2;
 
-  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
   const strokeDashoffset = animVal.interpolate({
     inputRange: [0, 1],
     outputRange: [circumference, 0],
@@ -103,7 +106,7 @@ export default function DashboardScreen() {
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const { meals, totals, targets, remaining, isLoading, loadToday, deleteMeal } = useMeals();
-  const { streakInfo } = useStreak(meals, targets);
+  const { streakInfo, refresh: refreshStreak } = useStreak(meals, targets);
   const [showTutorial, setShowTutorial] = useState(false);
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
   const prevMealCount = useRef(meals.length);
@@ -158,6 +161,14 @@ export default function DashboardScreen() {
     const timer = setTimeout(() => setConfirmationMsg(null), CONFIRMATION_DURATION);
     return () => clearTimeout(timer);
   }, [meals.length, t]);
+
+  // Refresh data every time the dashboard tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadToday();
+      refreshStreak();
+    }, [loadToday, refreshStreak])
+  );
 
   // Tutorial check
   useEffect(() => {

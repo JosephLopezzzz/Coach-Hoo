@@ -85,8 +85,10 @@ export async function computeStreakInfo(caloriesTarget: number): Promise<StreakI
     });
 
     // ── Current streak ────────────────────────────────────────────────────────
-    // Walk backwards from today; streak grows on quality >= 2, stays alive on
-    // quality 1 (just logged), breaks on quality 0 (missed).
+    // Walk backwards from today; any logged day (quality >= 1) keeps the streak
+    // alive and incrementing. Only a missed day (quality 0) breaks it.
+    // The hierarchical quality tiers (Perfect/Close/Logged) are still shown
+    // visually in the heatmap, but all count toward the streak number.
     let currentStreak = 0;
     let streakStartDate: string | null = null;
     let inStreak = true;
@@ -95,21 +97,10 @@ export async function computeStreakInfo(caloriesTarget: number): Promise<StreakI
       const entry = calendarData[i];
       if (!inStreak) break;
 
-      if (entry.quality >= 2) {
+      if (entry.quality >= 1) {
+        // Any logging counts — streak increments
         currentStreak++;
         streakStartDate = entry.date;
-      } else if (entry.quality === 1) {
-        // Neutral — today's partial progress or a day far from target
-        // If today (last entry), don't break the streak yet
-        if (i === calendarData.length - 1) {
-          // Today — user logged but not near target; let it pass
-        } else if (currentStreak > 0) {
-          // A neutral day embedded in a running streak is fine (doesn't break)
-          // but we stop counting backwards here
-          inStreak = false;
-        } else {
-          inStreak = false;
-        }
       } else {
         // quality 0 — missed day — breaks streak
         inStreak = false;
@@ -121,14 +112,13 @@ export async function computeStreakInfo(caloriesTarget: number): Promise<StreakI
     let runningStreak = 0;
 
     for (const entry of calendarData) {
-      if (entry.quality >= 2) {
+      if (entry.quality >= 1) {
         runningStreak++;
         if (runningStreak > longestStreak) longestStreak = runningStreak;
-      } else if (entry.quality === 0) {
+      } else {
         // Only a missed day fully resets
         runningStreak = 0;
       }
-      // quality 1 — neutral, doesn't add or reset
     }
 
     // ── Week heatmap (last 7 days) ────────────────────────────────────────────

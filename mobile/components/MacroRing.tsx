@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { Colors, FontSize, FontWeight } from "../constants/theme";
+import { FontSize, FontWeight } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
 interface MacroRingProps {
   calories: number;
@@ -80,6 +81,7 @@ export default function MacroRing({
   fatTarget,
   size = 220,
 }: MacroRingProps) {
+  const { colors } = useTheme();
   const strokeWidth = 12;
   const gap = strokeWidth + 4;
 
@@ -88,21 +90,21 @@ export default function MacroRing({
       macro: "Protein",
       consumed: protein,
       target: proteinTarget,
-      color: Colors.protein,
+      color: colors.protein,
       ring: 0,
     },
     {
       macro: "Carbs",
       consumed: carbs,
       target: carbsTarget,
-      color: Colors.carbs,
+      color: colors.carbs,
       ring: 1,
     },
     {
       macro: "Fat",
       consumed: fat,
       target: fatTarget,
-      color: Colors.fat,
+      color: colors.fat,
       ring: 2,
     },
   ];
@@ -124,7 +126,7 @@ export default function MacroRing({
                 cy={size / 2}
                 r={r}
                 fill="transparent"
-                stroke={Colors.bgElevated}
+                stroke={colors.bgElevated}
                 strokeWidth={strokeWidth}
               />
             );
@@ -150,11 +152,11 @@ export default function MacroRing({
         {/* Center content showing consumed / limit */}
         <View style={styles.center}>
           <View style={styles.calRow}>
-            <Text style={styles.calValue}>{Math.round(calories).toLocaleString()}</Text>
-            <Text style={styles.calTarget}> / {Math.round(caloriesTarget).toLocaleString()}</Text>
+            <Text style={[styles.calValue, { color: colors.textPrimary }]}>{Math.round(calories).toLocaleString()}</Text>
+            <Text style={[styles.calTarget, { color: colors.textMuted }]}> / {Math.round(caloriesTarget).toLocaleString()}</Text>
           </View>
-          <Text style={styles.calLabel}>kcal</Text>
-          <Text style={styles.calPct}>{calPct}%</Text>
+          <Text style={[styles.calLabel, { color: colors.textSecondary }]}>kcal</Text>
+          <Text style={[styles.calPct, { color: colors.primary }]}>{calPct}%</Text>
         </View>
       </View>
 
@@ -163,10 +165,10 @@ export default function MacroRing({
         {rings.map(({ macro, consumed, target, color }) => (
           <View key={macro} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: color }]} />
-            <Text style={styles.legendMacro}>{macro}</Text>
-            <Text style={styles.legendVal}>
+            <Text style={[styles.legendMacro, { color: colors.textSecondary }]}>{macro}</Text>
+            <Text style={[styles.legendVal, { color: colors.textPrimary }]}>
               {Math.round(consumed)}
-              <Text style={styles.legendTarget}>/{target}g</Text>
+              <Text style={[styles.legendTarget, { color: colors.textMuted }]}>/{target}g</Text>
             </Text>
           </View>
         ))}
@@ -199,24 +201,20 @@ const styles = StyleSheet.create({
   calValue: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.textPrimary,
   },
   calTarget: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.textMuted,
   },
   calLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 2,
   },
   calPct: {
     fontSize: FontSize.xs,
-    color: Colors.primary,
     fontWeight: FontWeight.semibold,
     marginTop: 2,
   },
@@ -235,17 +233,14 @@ const styles = StyleSheet.create({
   },
   legendMacro: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
   legendVal: {
     fontSize: FontSize.sm,
-    color: Colors.textPrimary,
     fontWeight: FontWeight.bold,
   },
   legendTarget: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
     fontWeight: FontWeight.regular,
   },
 });
