@@ -667,13 +667,7 @@ export default function CoachOnboarding() {
             >
               {typingDone && (
                 <>
-                  <View style={styles.finishMascotWrap}>
-                    <Image
-                      source={require('../assets/mascot/idle.gif')}
-                      style={styles.finishMascot}
-                      contentFit="contain"
-                    />
-                  </View>
+                  <ReviewSummary form={form} lang={lang} />
                   <PrimaryBtn label={getGoToDashboardLabel(lang)} onPress={finishOnboarding} />
                 </>
               )}
@@ -740,6 +734,89 @@ function StepContent({
         onTypeComplete={onTypeDone}
       />
       {typingDone && <View style={styles.inputArea}>{children}</View>}
+    </View>
+  );
+}
+
+function ReviewSummary({ form, lang }: { form: FormData; lang: 'english' | 'filipino' }) {
+  const isEn = lang === 'english';
+
+  // Build height display string
+  const heightDisplay = form.heightValue
+    ? `${form.heightValue} ${form.heightUnit}`
+    : isEn ? 'Not set' : 'Hindi itinakda';
+
+  // Build weight display string
+  const weightDisplay = form.weightValue
+    ? `${form.weightValue} ${form.weightUnit}`
+    : isEn ? 'Not set' : 'Hindi itinakda';
+
+  // Build goal display
+  const goalDisplay = form.goal
+    ? getGoalLabel(lang, form.goal)
+    : isEn ? 'Not set' : 'Hindi itinakda';
+
+  // Build health conditions display
+  let healthDisplay: string;
+  if (form.healthAnswer === 'skip') {
+    healthDisplay = isEn ? 'Skipped' : 'Nilaktawan';
+  } else if (form.healthAnswer === 'no' || !form.healthConditions.length) {
+    healthDisplay = isEn ? 'None' : 'Wala';
+  } else {
+    const items = form.healthConditions
+      .filter(k => k !== 'none' && k !== 'prefer_not_say')
+      .map(k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    if (form.healthConditionOther) items.push(form.healthConditionOther);
+    healthDisplay = items.length > 0 ? items.join(', ') : (isEn ? 'None' : 'Wala');
+  }
+
+  // Build allergies display
+  let allergiesDisplay: string;
+  if (form.allergiesAnswer === 'skip') {
+    allergiesDisplay = isEn ? 'Skipped' : 'Nilaktawan';
+  } else if (form.allergiesAnswer === 'no' || !form.allergies.length) {
+    allergiesDisplay = isEn ? 'None' : 'Wala';
+  } else {
+    const items = form.allergies
+      .filter(k => k !== 'none' && k !== 'prefer_not_say')
+      .map(k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    if (form.allergyOther) items.push(form.allergyOther);
+    allergiesDisplay = items.length > 0 ? items.join(', ') : (isEn ? 'None' : 'Wala');
+  }
+
+  const rows: { icon: string; label: string; value: string }[] = [
+    { icon: 'person-outline', label: isEn ? 'Name' : 'Pangalan', value: form.name || '—' },
+    { icon: 'calendar-outline', label: isEn ? 'Age' : 'Edad', value: form.age ? `${form.age} ${isEn ? 'years old' : 'taong gulang'}` : '—' },
+    { icon: 'resize-outline', label: isEn ? 'Height' : 'Taas', value: heightDisplay },
+    { icon: 'barbell-outline', label: isEn ? 'Weight' : 'Bigat', value: weightDisplay },
+    { icon: 'flag-outline', label: isEn ? 'Goal' : 'Layunin', value: goalDisplay },
+    { icon: 'heart-outline', label: isEn ? 'Health Conditions' : 'Kalagayang Pangkalusugan', value: healthDisplay },
+    { icon: 'warning-outline', label: isEn ? 'Allergies' : 'Mga Alerhiya', value: allergiesDisplay },
+  ];
+
+  return (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <Ionicons name="clipboard-outline" size={18} color={Colors.primary} />
+        <Text style={styles.reviewTitle}>
+          {isEn ? 'Your Profile Summary' : 'Buod ng Iyong Profile'}
+        </Text>
+      </View>
+      {rows.map((row, idx) => (
+        <View
+          key={row.label}
+          style={[
+            styles.reviewRow,
+            idx < rows.length - 1 && styles.reviewRowBorder,
+          ]}
+        >
+          <View style={styles.reviewLabelRow}>
+            <Ionicons name={row.icon as any} size={16} color="#9CA3AF" />
+            <Text style={styles.reviewLabel}>{row.label}</Text>
+          </View>
+          <Text style={styles.reviewValue} numberOfLines={2}>{row.value}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -900,6 +977,60 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
 
-  finishMascotWrap: { alignItems: 'center', marginVertical: Spacing.md },
-  finishMascot: { width: 150, height: 150 },
+  // ── Review Summary Card ──
+  reviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  reviewTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: '#111827',
+  },
+  reviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+  },
+  reviewRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F3F4F6',
+  },
+  reviewLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  reviewLabel: {
+    fontSize: FontSize.sm,
+    color: '#6B7280',
+    fontWeight: FontWeight.medium,
+  },
+  reviewValue: {
+    fontSize: FontSize.sm,
+    color: '#111827',
+    fontWeight: FontWeight.semibold,
+    flex: 1.2,
+    textAlign: 'right',
+  },
 });
+

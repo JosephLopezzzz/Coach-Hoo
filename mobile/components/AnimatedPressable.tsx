@@ -37,7 +37,7 @@ export default function AnimatedPressable({
 
     Animated.spring(scale, {
       toValue: scaleTo,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
       speed: 50,
       bounciness: 10,
     }).start();
@@ -48,7 +48,7 @@ export default function AnimatedPressable({
   const handlePressOut = (e: any) => {
     Animated.spring(scale, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
       speed: 50,
       bounciness: 10,
     }).start();

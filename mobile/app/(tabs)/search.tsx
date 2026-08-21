@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, FlatList,
-  Pressable, ActivityIndicator, ScrollView, Modal, Alert
+  Pressable, ActivityIndicator, ScrollView, Modal, Alert, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -52,6 +52,10 @@ export default function SearchScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedItemSource, setSelectedItemSource] = useState<'food' | 'recipe' | 'restaurant' | null>(null);
+
+  // Meal Type Selection State
+  const [mealTypeModalVisible, setMealTypeModalVisible] = useState(false);
+  const [pendingLogItem, setPendingLogItem] = useState<{item: any, type: string, defaultQty: number} | null>(null);
 
   const search = useCallback(async (q: string) => {
     setLoading(true);
@@ -189,17 +193,8 @@ export default function SearchScreen() {
 
     const defaultQty = item.macros_per_portion?.portion_g ?? item.serving_size_g ?? 100;
 
-    Alert.alert(
-      t('log.title'),
-      t('search.selectMealType', { name: item.name }),
-      [
-        ...MEAL_TYPES.map((mt) => ({
-          text: getMealTypeLabel(lang, mt.key),
-          onPress: () => performLog(item, type, defaultQty, mt.key),
-        })),
-        { text: t('common.cancel'), style: 'cancel' as const },
-      ]
-    );
+    setPendingLogItem({ item, type, defaultQty });
+    setMealTypeModalVisible(true);
   };
 
   const allergenKeywordsFor = (item: any): string[] => {
@@ -530,6 +525,42 @@ export default function SearchScreen() {
         </View>
       </Modal>
 
+      {/* Meal Type Selection Modal */}
+      <Modal visible={mealTypeModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.mealTypeModalCard}>
+            <Text style={styles.modalTitle}>
+              {pendingLogItem?.item ? t('search.selectMealType', { name: pendingLogItem.item.name }) : t('log.title')}
+            </Text>
+            
+            {MEAL_TYPES.map((mt) => (
+              <Pressable
+                key={mt.key}
+                style={({ pressed }) => [styles.mealTypeOption, pressed && { opacity: 0.8 }]}
+                onPress={() => {
+                  if (pendingLogItem) {
+                    performLog(pendingLogItem.item, pendingLogItem.type, pendingLogItem.defaultQty, mt.key);
+                  }
+                  setMealTypeModalVisible(false);
+                  setPendingLogItem(null);
+                }}
+              >
+                <Text style={styles.mealTypeOptionText}>{getMealTypeLabel(lang, mt.key)}</Text>
+              </Pressable>
+            ))}
+
+            <Pressable
+              style={styles.mealTypeCancel}
+              onPress={() => {
+                setMealTypeModalVisible(false);
+                setPendingLogItem(null);
+              }}
+            >
+              <Text style={styles.mealTypeCancelText}>{t('common.cancel')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -683,5 +714,38 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   ingredientQty: {
     fontWeight: FontWeight.bold,
     color: colors.textPrimary,
+  },
+  
+  // Meal Type Modal Styles
+  mealTypeModalCard: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    width: '85%',
+    maxWidth: 360,
+  },
+  mealTypeOption: {
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  mealTypeOptionText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  mealTypeCancel: {
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  mealTypeCancelText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: colors.error,
   },
 });

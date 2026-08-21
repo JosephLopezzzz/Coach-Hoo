@@ -584,6 +584,18 @@ export const mealsApi = {
 
     return { data: result };
   },
+
+  clearAll: async () => {
+    const db = getDb();
+    if (db) {
+      db.withTransactionSync(() => {
+        db.runSync(`DELETE FROM meal_items`);
+        db.runSync(`DELETE FROM meals`);
+      });
+    } else {
+      await saveLocalMeals([]);
+    }
+  },
 };
 
 export const calculateApi = {

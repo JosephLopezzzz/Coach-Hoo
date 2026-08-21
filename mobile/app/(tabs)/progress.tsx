@@ -21,9 +21,9 @@ type Timeframe = 7 | 14 | 30;
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { targets, meals } = useMeals();
+  const { totals, targets } = useMeals();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { streakInfo, isLoading: streakLoading } = useStreak(meals, targets);
+  const { streakInfo, isLoading: streakLoading } = useStreak(totals.calories, targets);
 
   // ── Calendar navigation ───────────────────────────────────────────────────
   const today = new Date();
@@ -105,7 +105,8 @@ export default function ProgressScreen() {
     const totalCals = historyData.reduce((acc, curr) => acc + curr.calories, 0);
     const avgCalories = Math.round(totalCals / historyData.length);
 
-    const metGoalCount = historyData.filter(d => d.calories > 0 && d.calories <= targetCalories + 150 && d.calories >= targetCalories - 300).length;
+    // Adherence means falling in the "Perfect" range (Target - 300 to Target + 200)
+    const metGoalCount = historyData.filter(d => d.calories > 0 && d.calories <= targetCalories + 200 && d.calories >= targetCalories - 300).length;
     const adherenceRate = Math.round((metGoalCount / historyData.length) * 100);
 
     const peakCalories = Math.max(...historyData.map(d => d.calories), 0);
@@ -427,7 +428,7 @@ function StreakHeroCard({
   }
 
   const levelSubtitle: Record<string, string> = {
-    Spark:   'Log your first streak day!',
+    Spark:   streakInfo.currentStreak > 0 ? 'You\'ve started! Keep the spark alive ✨' : 'Log your first meal to start!',
     Glow:    'You\'re warming up! Keep going 🔥',
     Blaze:   'A full week streak — blazing! 🔥',
     Ignite:  'Two weeks strong — you\'re on fire!',
@@ -482,8 +483,8 @@ function StreakHeroCard({
         {/* Calendar rows */}
         {weeks.map((week, wIdx) => {
           // Detect streak run within this week for pill rendering
-          const runStart = week.findIndex(c => c && c.quality >= 2);
-          const runEnd   = week.reduce((last, c, i) => (c && c.quality >= 2 ? i : last), -1);
+          const runStart = week.findIndex(c => c && c.quality >= 1);
+          const runEnd   = week.reduce((last, c, i) => (c && c.quality >= 1 ? i : last), -1);
           const hasRun   = runStart !== -1 && runEnd >= runStart;
 
           return (
@@ -579,7 +580,7 @@ function StreakHeroCard({
           {[
             { color: '#E8A254', label: 'Perfect' },
             { color: '#FFA76C', label: 'Close'   },
-            { color: '#B0B0B0', label: 'Logged'  },
+            { color: '#F4C97A', label: 'Logged'  },
             { color: 'transparent', label: 'Missed', border: true },
           ].map(item => (
             <View key={item.label} style={styles.streakLegendItem}>

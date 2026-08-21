@@ -5,6 +5,8 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY } from '../services/coachMessageService';
+import { mealsApi } from '../services/api';
+import { clearStreakCache } from '../services/streakService';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -95,8 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await deleteStorageItem(USER_STORAGE_KEY);
     try {
       await AsyncStorage.multiRemove([LANGUAGE_KEY, ONBOARDING_PROGRESS_KEY]);
+      await mealsApi.clearAll();
+      clearStreakCache();
     } catch (e) {
-      console.error('Failed to clear language/onboarding state:', e);
+      console.error('Failed to clear language/onboarding/meals state:', e);
     }
     setUser(null);
   }, []);

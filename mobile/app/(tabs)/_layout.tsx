@@ -28,8 +28,9 @@ export default function TabLayout() {
           backgroundColor: colors.bgCard,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 68,
+          paddingTop: 6,
+          paddingBottom: 10,
         },
         tabBarActiveTintColor:   colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -52,8 +53,7 @@ export default function TabLayout() {
         name="log"
         options={{
           title: t('tab.log'),
-          tabBarIcon: ({ focused }) => <TabIcon name="add-circle" focused={focused} activeColor={colors.primary} inactiveColor={colors.textMuted} />,
-          tabBarActiveTintColor: colors.primary,
+          href: null,
         }}
       />
       <Tabs.Screen

@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Confetti from './Confetti';
 import { useLanguage } from '../context/LanguageContext';
@@ -85,6 +86,7 @@ export default function DashboardTutorial({
   scrollViewRef,
 }: DashboardTutorialProps) {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -233,6 +235,7 @@ export default function DashboardTutorial({
   if (!visible) return null;
 
   // Calculate tooltip placement
+  const FOOTER_HEIGHT = 60 + Math.max(insets.bottom, 16); // sticky footer reserve
   const spaceAbove = spotlight ? spotlight.top : 0;
   const spaceBelow = spotlight ? screenH - (spotlight.top + spotlight.height) : 0;
   
@@ -247,17 +250,26 @@ export default function DashboardTutorial({
     transform: [{ scale: scaleAnim }],
   };
 
+  // Compute maxHeight so the card never overlaps the sticky footer
+  let cardMaxHeight: number | undefined;
+
   if (spotlight) {
     if (isTopPlacement) {
       // Place ABOVE the spotlight
       tooltipStyle.bottom = screenH - spotlight.top + Spacing.sm;
+      // Available space = from top of screen to bottom of card
+      cardMaxHeight = spotlight.top - Spacing.sm - Spacing.md;
     } else {
       // Place BELOW the spotlight
-      tooltipStyle.top = spotlight.top + spotlight.height + Spacing.sm;
+      const cardTop = spotlight.top + spotlight.height + Spacing.sm;
+      tooltipStyle.top = cardTop;
+      // Available space = from card top to footer top
+      cardMaxHeight = screenH - cardTop - FOOTER_HEIGHT - Spacing.sm;
     }
   } else {
     // Center it if there's no spotlight
     tooltipStyle.top = screenH / 2 - 120;
+    cardMaxHeight = screenH - (screenH / 2 - 120) - FOOTER_HEIGHT - Spacing.sm;
   }
 
   return (
@@ -277,8 +289,13 @@ export default function DashboardTutorial({
 
         <Confetti active={showConfetti} />
 
-        {/* Floating Tooltip Card */}
-        <Animated.View style={[styles.coachCard, tooltipStyle]}>
+        {/* Floating Tooltip Card — content only, scrollable */}
+        <Animated.View style={[
+          styles.coachCard,
+          tooltipStyle,
+          spotlight ? { paddingTop: Spacing.lg } : null,
+          cardMaxHeight ? { maxHeight: Math.max(cardMaxHeight, 120) } : null,
+        ]}>
           
           {/* Caret pointing to spotlight */}
           {spotlight && isTopPlacement && (
@@ -288,56 +305,63 @@ export default function DashboardTutorial({
             <View style={[styles.caret, styles.caretTop]} />
           )}
 
-          {/* Large floating mascot */}
-          <View style={styles.mascotStage}>
-            <Image
-              source={require('../assets/mascot/idle.gif')}
-              style={styles.mascotLarge}
-              contentFit="contain"
-            />
-          </View>
+          {/* Large floating mascot — only on steps without a spotlight */}
+          {!spotlight && (
+            <View style={styles.mascotStage}>
+              <Image
+                source={require('../assets/mascot/idle.gif')}
+                style={styles.mascotLarge}
+                contentFit="contain"
+              />
+            </View>
+          )}
 
-          <View style={styles.contentWrap}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.contentWrap}
+          >
             <Text style={styles.title}>{t(current.titleKey)}</Text>
             <Text style={styles.message}>{t(current.messageKey, { name })}</Text>
+          </ScrollView>
+        </Animated.View>
+
+        {/* Sticky navigation footer — always pinned to the bottom */}
+        <Animated.View style={[styles.stickyFooter, { opacity: fadeAnim, paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <Pressable onPress={handleSkip} style={styles.skipBtn}>
+            <Text style={styles.skipText}>{t('common.skip')}</Text>
+          </Pressable>
+
+          <View style={styles.dotsRow}>
+            {steps.map((_, i) => (
+              <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
+            ))}
           </View>
 
-          <View style={styles.footer}>
-            <Pressable onPress={handleSkip} style={styles.skipBtn}>
-              <Text style={styles.skipText}>{t('common.skip')}</Text>
-            </Pressable>
-
-            <View style={styles.dotsRow}>
-              {steps.map((_, i) => (
-                <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-              ))}
-            </View>
-
-            <View style={styles.navGroup}>
-              {!isFirst && (
-                <Pressable
-                  style={styles.navBtn}
-                  onPress={() => goTo(step - 1)}
-                >
-                  <Text style={styles.navBtnText}>{t('common.back')}</Text>
-                </Pressable>
-              )}
-              {isLast ? (
-                <Pressable
-                  style={[styles.navBtn, styles.doneBtn]}
-                  onPress={handleComplete}
-                >
-                  <Text style={styles.doneBtnText}>{t('common.done')}</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={[styles.navBtn, styles.nextBtn]}
-                  onPress={() => goTo(step + 1)}
-                >
-                  <Text style={styles.nextBtnText}>{t('common.next')}</Text>
-                </Pressable>
-              )}
-            </View>
+          <View style={styles.navGroup}>
+            {!isFirst && (
+              <Pressable
+                style={styles.navBtn}
+                onPress={() => goTo(step - 1)}
+              >
+                <Text style={styles.navBtnText}>{t('common.back')}</Text>
+              </Pressable>
+            )}
+            {isLast ? (
+              <Pressable
+                style={[styles.navBtn, styles.doneBtn]}
+                onPress={handleComplete}
+              >
+                <Text style={styles.doneBtnText}>{t('common.done')}</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[styles.navBtn, styles.nextBtn]}
+                onPress={() => goTo(step + 1)}
+              >
+                <Text style={styles.nextBtnText}>{t('common.next')}</Text>
+              </Pressable>
+            )}
           </View>
         </Animated.View>
       </View>
@@ -373,7 +397,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     paddingTop: 50, // Space for the floating mascot
-    paddingBottom: Spacing.xl,
     gap: Spacing.md,
     borderWidth: 2,
     borderColor: Colors.primary,
@@ -438,11 +461,19 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
-  footer: {
+  stickyFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    backgroundColor: 'rgba(31, 41, 55, 0.92)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   dotsRow: {
     flexDirection: 'row',

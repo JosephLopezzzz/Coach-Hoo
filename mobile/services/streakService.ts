@@ -13,10 +13,10 @@ const CALENDAR_DAYS = 90;
  * Logged:  any other    → quality 1
  * Missed:  no meals     → quality 0
  */
-const PERFECT_LOWER = -150;
-const PERFECT_UPPER = 150;
-const CLOSE_LOWER   = -500;
-const CLOSE_UPPER   = 300;
+const PERFECT_LOWER = -300;
+const PERFECT_UPPER = 200;
+const CLOSE_LOWER   = -800;
+const CLOSE_UPPER   = 400;
 
 // ─── Flame level thresholds ───────────────────────────────────────────────────
 const LEVELS: { min: number; level: 1 | 2 | 3 | 4 | 5; name: StreakLevelName }[] = [
@@ -36,12 +36,25 @@ function getFlameLevel(streak: number): { level: 1|2|3|4|5; name: StreakLevelNam
   return { level: 1, name: 'Spark' };
 }
 
-function classifyQuality(calories: number, target: number, hasLogged: boolean): DayQuality {
+function classifyQuality(calories: number, target: number, hasLogged: boolean, isToday: boolean = false): DayQuality {
   if (!hasLogged) return 0;
   if (target <= 0) return 1; // no target set — just count as logged
+  
   const diff = calories - target;
+
+  // If it's today and they are still under the upper bound, they are "On Track".
+  // We don't want to penalize them with a grey dot just because they've only eaten breakfast!
+  if (isToday && diff <= PERFECT_UPPER) {
+    return 3; // Perfect / On Track
+  }
+  if (isToday && diff <= CLOSE_UPPER) {
+    return 2; // Close / Slightly Over
+  }
+
+  // Historical or exceeding bounds evaluation
   if (diff >= PERFECT_LOWER && diff <= PERFECT_UPPER) return 3;
   if (diff >= CLOSE_LOWER   && diff <= CLOSE_UPPER)   return 2;
+  
   return 1;
 }
 
@@ -59,28 +72,59 @@ function getLastNDates(n: number): string[] {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export async function computeStreakInfo(caloriesTarget: number): Promise<StreakInfo> {
-  try {
-    // Fetch last 90 days of history
-    const { data: historyRaw } = await mealsApi.history(CALENDAR_DAYS);
+// Module-level cache for historical data (up to yesterday)
+let _cachedCalendarData: { date: string, calories: number, hasLogged: boolean }[] | null = null;
+let _cachedLastUpdateDate: string | null = null;
 
-    // Build a lookup map: date → calories
-    const calMap: Record<string, number> = {};
-    const loggedSet = new Set<string>();
-    for (const entry of historyRaw) {
-      calMap[entry.date] = entry.calories;
-      if (entry.calories > 0) loggedSet.add(entry.date);
+export function clearStreakCache() {
+  _cachedCalendarData = null;
+  _cachedLastUpdateDate = null;
+}
+
+export async function computeStreakInfo(currentCalories: number, caloriesTarget: number): Promise<StreakInfo> {
+  try {
+    const todayStr = getLocalDateString(new Date());
+    
+    // Check if we need to rebuild the historical cache
+    if (!_cachedCalendarData || _cachedLastUpdateDate !== todayStr) {
+      // Fetch last 90 days of history
+      const { data: historyRaw } = await mealsApi.history(CALENDAR_DAYS);
+
+      // Build a lookup map: date → calories
+      const calMap: Record<string, number> = {};
+      const loggedSet = new Set<string>();
+      for (const entry of historyRaw) {
+        calMap[entry.date] = entry.calories;
+        if (entry.calories > 0) loggedSet.add(entry.date);
+      }
+
+      // Build full calendar data (last 90 days)
+      const allDates = getLastNDates(CALENDAR_DAYS);
+      _cachedCalendarData = allDates.map((date) => {
+        const calories = calMap[date] ?? 0;
+        const hasLogged = loggedSet.has(date);
+        return {
+          date,
+          calories,
+          hasLogged,
+        };
+      });
+      _cachedLastUpdateDate = todayStr;
     }
 
-    // Build full calendar data (last 90 days)
-    const allDates = getLastNDates(CALENDAR_DAYS);
-    const calendarData: StreakDayEntry[] = allDates.map((date) => {
-      const calories = calMap[date] ?? 0;
-      const hasLogged = loggedSet.has(date);
+    // Compute quality dynamically so it uses the latest caloriesTarget
+    const calendarData: StreakDayEntry[] = _cachedCalendarData.map((entry) => {
+      if (entry.date === todayStr) {
+        return {
+          date: todayStr,
+          quality: classifyQuality(currentCalories, caloriesTarget, currentCalories > 0, true),
+          calories: currentCalories,
+        };
+      }
       return {
-        date,
-        quality: classifyQuality(calories, caloriesTarget, hasLogged),
-        calories,
+        date: entry.date,
+        quality: classifyQuality(entry.calories, caloriesTarget, entry.hasLogged, false),
+        calories: entry.calories,
       };
     });
 
@@ -179,7 +223,7 @@ export function getQualityColor(quality: DayQuality): string {
   switch (quality) {
     case 3: return '#E8A254'; // golden — Perfect
     case 2: return '#FFA76C'; // peach-orange — Close
-    case 1: return '#B0B0B0'; // muted grey — Logged (neutral)
+    case 1: return '#F4C97A'; // soft yellow — Logged
     default: return 'transparent';
   }
 }

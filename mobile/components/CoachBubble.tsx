@@ -32,9 +32,12 @@ export default function CoachBubble({
 
   return (
     <Pressable
-      style={[styles.container, isTyping && { minHeight: 600 }]}
+      style={styles.container}
       onPress={() => isTyping && typewriterRef.current?.skip()}
-      accessible={false}
+      accessibilityRole={isTyping ? 'button' : undefined}
+      accessibilityLabel={isTyping ? 'Reveal the full coach message' : undefined}
+      accessibilityHint={isTyping ? 'Skips the typing animation' : undefined}
+      accessible={isTyping}
     >
       <View style={styles.mascotStage}>
         <View style={styles.backdropAngle} />
@@ -94,6 +97,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   textWrap: {
+    minHeight: 126,
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
   },
@@ -108,6 +112,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: '#9CA3AF',
     marginTop: Spacing.sm,
-    fontStyle: 'italic',
+    fontWeight: FontWeight.medium,
   },
 });

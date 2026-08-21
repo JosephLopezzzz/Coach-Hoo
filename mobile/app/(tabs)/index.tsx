@@ -106,7 +106,7 @@ export default function DashboardScreen() {
   const { colors, isDark } = useTheme();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const { meals, totals, targets, remaining, isLoading, loadToday, deleteMeal } = useMeals();
-  const { streakInfo, refresh: refreshStreak } = useStreak(meals, targets);
+  const { streakInfo, refresh: refreshStreak } = useStreak(totals.calories, targets);
   const [showTutorial, setShowTutorial] = useState(false);
   const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
   const prevMealCount = useRef(meals.length);
