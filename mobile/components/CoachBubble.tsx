@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import TypewriterText from './TypewriterText';
@@ -12,14 +12,26 @@ interface CoachBubbleProps {
   onTypeComplete?: () => void;
 }
 
-export default function CoachBubble({
+export interface CoachBubbleHandle {
+  skip: () => void;
+}
+
+const CoachBubbleRender: React.ForwardRefRenderFunction<CoachBubbleHandle, CoachBubbleProps> = ({
   message,
   typewriter = true,
   typewriterSpeed = 20,
   onTypeComplete,
-}: CoachBubbleProps) {
+}, ref) => {
   const typewriterRef = useRef<TypewriterTextHandle>(null);
   const [isTyping, setIsTyping] = useState(typewriter);
+
+  useImperativeHandle(ref, () => ({
+    skip: () => {
+      if (isTyping) {
+        typewriterRef.current?.skip();
+      }
+    }
+  }));
 
   useEffect(() => {
     setIsTyping(typewriter);
@@ -67,7 +79,7 @@ export default function CoachBubble({
       </View>
     </Pressable>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -115,3 +127,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
 });
+
+const CoachBubble = forwardRef(CoachBubbleRender);
+export default CoachBubble;

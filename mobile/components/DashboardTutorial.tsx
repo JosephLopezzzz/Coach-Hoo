@@ -44,15 +44,20 @@ function SpotlightCutout({
   screenW: number;
   screenH: number;
 }) {
+  const safeTop = Math.max(0, rect.top);
   const holeBottom = rect.top + rect.height;
+  const safeBottomHeight = Math.max(0, screenH - holeBottom);
+  const safeLeft = Math.max(0, rect.left);
   const holeRight = rect.left + rect.width;
+  const safeRightWidth = Math.max(0, screenW - holeRight);
+  const safeHeight = Math.max(0, rect.height);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[styles.curtain, { top: 0, left: 0, right: 0, height: rect.top }]} />
-      <View style={[styles.curtain, { bottom: 0, left: 0, right: 0, height: screenH - holeBottom }]} />
-      <View style={[styles.curtain, { top: rect.top, left: 0, width: rect.left, height: rect.height }]} />
-      <View style={[styles.curtain, { top: rect.top, right: 0, width: screenW - holeRight, height: rect.height }]} />
+      <View style={[styles.curtain, { top: 0, left: 0, right: 0, height: safeTop }]} />
+      <View style={[styles.curtain, { bottom: 0, left: 0, right: 0, height: safeBottomHeight }]} />
+      <View style={[styles.curtain, { top: safeTop, left: 0, width: safeLeft, height: safeHeight }]} />
+      <View style={[styles.curtain, { top: safeTop, right: 0, width: safeRightWidth, height: safeHeight }]} />
       <View
         style={{
           position: 'absolute',
@@ -299,10 +304,16 @@ export default function DashboardTutorial({
           
           {/* Caret pointing to spotlight */}
           {spotlight && isTopPlacement && (
-            <View style={[styles.caret, styles.caretBottom]} />
+            <View style={[styles.caretContainer, { bottom: -14 }]}>
+              <View style={[styles.caret, styles.caretBottomOuter]} />
+              <View style={[styles.caret, styles.caretBottomInner]} />
+            </View>
           )}
           {spotlight && !isTopPlacement && (
-            <View style={[styles.caret, styles.caretTop]} />
+            <View style={[styles.caretContainer, { top: -14 }]}>
+              <View style={[styles.caret, styles.caretTopOuter]} />
+              <View style={[styles.caret, styles.caretTopInner]} />
+            </View>
           )}
 
           {/* Large floating mascot — only on steps without a spotlight */}
@@ -402,9 +413,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 15,
   },
   mascotStage: {
     position: 'absolute',
@@ -419,16 +430,21 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
   },
+  caretContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: 28,
+    height: 14,
+  },
   caret: {
     position: 'absolute',
     width: 0,
     height: 0,
     backgroundColor: 'transparent',
     borderStyle: 'solid',
-    alignSelf: 'center',
   },
-  caretTop: {
-    top: -14,
+  caretTopOuter: {
+    top: 0,
     borderLeftWidth: 14,
     borderRightWidth: 14,
     borderBottomWidth: 14,
@@ -436,14 +452,32 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: Colors.primary,
   },
-  caretBottom: {
-    bottom: -14,
+  caretTopInner: {
+    top: 3, // inner triangle shifted down to expose top border
+    borderLeftWidth: 11,
+    borderRightWidth: 11,
+    borderBottomWidth: 11,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#FFFFFF',
+  },
+  caretBottomOuter: {
+    bottom: 0,
     borderLeftWidth: 14,
     borderRightWidth: 14,
     borderTopWidth: 14,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: Colors.primary,
+  },
+  caretBottomInner: {
+    bottom: 3,
+    borderLeftWidth: 11,
+    borderRightWidth: 11,
+    borderTopWidth: 11,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FFFFFF',
   },
   contentWrap: {
     alignItems: 'center',

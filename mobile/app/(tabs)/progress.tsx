@@ -23,7 +23,7 @@ export default function ProgressScreen() {
   const { colors, isDark } = useTheme();
   const { totals, targets } = useMeals();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { streakInfo, isLoading: streakLoading } = useStreak(totals.calories, targets);
+  const { streakInfo, isLoading: streakLoading } = useStreak(totals.calories, targets, totals);
 
   // ── Calendar navigation ───────────────────────────────────────────────────
   const today = new Date();
@@ -497,7 +497,7 @@ function StreakHeroCard({
                     {
                       left:  runStart * (36 + 4),
                       right: (6 - runEnd) * (36 + 4),
-                      backgroundColor: '#E8A25440',
+                      backgroundColor: '#D94A1E26',
                     },
                   ]}
                 />

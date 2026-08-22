@@ -536,7 +536,11 @@ export default function SearchScreen() {
             {MEAL_TYPES.map((mt) => (
               <Pressable
                 key={mt.key}
-                style={({ pressed }) => [styles.mealTypeOption, pressed && { opacity: 0.8 }]}
+                style={({ pressed }) => [
+                  styles.mealTypeOption,
+                  { borderColor: mt.color },
+                  pressed && { opacity: 0.8, backgroundColor: mt.color + '10' }
+                ]}
                 onPress={() => {
                   if (pendingLogItem) {
                     performLog(pendingLogItem.item, pendingLogItem.type, pendingLogItem.defaultQty, mt.key);
@@ -545,7 +549,10 @@ export default function SearchScreen() {
                   setPendingLogItem(null);
                 }}
               >
-                <Text style={styles.mealTypeOptionText}>{getMealTypeLabel(lang, mt.key)}</Text>
+                <Ionicons name={mt.icon as any} size={20} color={mt.color} />
+                <Text style={[styles.mealTypeOptionText, { color: mt.color }]}>
+                  {getMealTypeLabel(lang, mt.key)}
+                </Text>
               </Pressable>
             ))}
 
@@ -723,20 +730,32 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: Spacing.xl,
     width: '85%',
     maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
   },
   mealTypeOption: {
+    flexDirection: 'row',
     backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
     marginBottom: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   mealTypeOptionText: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
-    color: colors.textPrimary,
+    fontWeight: FontWeight.bold,
   },
   mealTypeCancel: {
     marginTop: Spacing.sm,

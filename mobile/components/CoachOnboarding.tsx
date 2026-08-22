@@ -110,6 +110,7 @@ const emptyForm: FormData = {
 export default function CoachOnboarding() {
   const { completeOnboarding } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const bubbleRef = useRef<CoachBubbleHandle>(null);
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(emptyForm);
@@ -315,6 +316,8 @@ export default function CoachOnboarding() {
         <View style={styles.backBtn} />
       </View>
 
+
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -373,6 +376,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="welcome"
+              bubbleRef={bubbleRef}
             >
               <TextInput
                 style={styles.inputCard}
@@ -393,6 +397,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="age"
+              bubbleRef={bubbleRef}
             >
               <TextInput
                 style={styles.inputCard}
@@ -415,6 +420,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="height_weight"
+              bubbleRef={bubbleRef}
             >
               <View style={styles.dualRow}>
                 <View style={styles.dualField}>
@@ -664,6 +670,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="finish"
+              bubbleRef={bubbleRef}
             >
               {typingDone && (
                 <>
@@ -675,6 +682,16 @@ export default function CoachOnboarding() {
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* Full-screen tap-to-skip overlay */}
+      {!typingDone && currentStep !== 'language' && currentStep !== 'feedback' && (
+        <Pressable
+          style={[StyleSheet.absoluteFill, { zIndex: 999, elevation: 999 }]}
+          onPress={() => bubbleRef.current?.skip()}
+          accessibilityRole="button"
+          accessibilityLabel="Reveal the full coach message"
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -718,16 +735,19 @@ function StepContent({
   onTypeDone,
   stepKey,
   children,
+  bubbleRef,
 }: {
   coachMessage: string;
   typingDone: boolean;
   onTypeDone: () => void;
   stepKey: string;
   children: React.ReactNode;
+  bubbleRef?: React.RefObject<CoachBubbleHandle>;
 }) {
   return (
     <View key={stepKey} style={styles.stepContent}>
       <CoachBubble
+        ref={bubbleRef}
         message={coachMessage}
         typewriter
         typewriterSpeed={15}
@@ -920,7 +940,7 @@ const styles = StyleSheet.create({
   },
   optionCardActive: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: '#FFF0EC',
   },
   optionCardText: {
     fontSize: FontSize.md,

@@ -99,11 +99,16 @@ export const processSyncQueue = async (onTaskComplete?: (type: SyncTaskType, res
 export const initNetworkSyncListener = (onTaskComplete?: (type: SyncTaskType, result: any) => void) => {
   try {
     const NetInfo = require('@react-native-community/netinfo');
+    let wasOnline = false;
     return NetInfo.addEventListener((state: any) => {
-      if (state.isConnected && state.isInternetReachable) {
+      const isOnlineNow = !!(state.isConnected && state.isInternetReachable);
+      
+      if (isOnlineNow && !wasOnline) {
         console.log('[SyncService] Network online, processing sync queue...');
         processSyncQueue(onTaskComplete);
       }
+      
+      wasOnline = isOnlineNow;
     });
   } catch (err) {
     console.warn('[SyncService] NetInfo listener setup skipped:', err);

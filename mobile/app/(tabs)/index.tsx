@@ -166,8 +166,7 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       loadToday();
-      refreshStreak();
-    }, [loadToday, refreshStreak])
+    }, [loadToday])
   );
 
   // Tutorial check

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { computeStreakInfo } from '../services/streakService';
 import type { StreakInfo } from '../types';
-import type { Meal, DailyTargets } from '../types';
+import type { DailyTargets, MacroResult } from '../types';
 
 const DEFAULT_STREAK: StreakInfo = {
   currentStreak: 0,
@@ -19,7 +19,7 @@ const DEFAULT_STREAK: StreakInfo = {
  * @param currentCalories Today's total consumed calories from MealContext
  * @param targets         Daily macro targets (used to read calories_target)
  */
-export function useStreak(currentCalories: number, targets: DailyTargets | null) {
+export function useStreak(currentCalories: number, targets: DailyTargets | null, currentMacros?: MacroResult) {
   const [streakInfo, setStreakInfo] = useState<StreakInfo>(DEFAULT_STREAK);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,19 +28,19 @@ export function useStreak(currentCalories: number, targets: DailyTargets | null)
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const info = await computeStreakInfo(currentCalories, caloriesTarget);
+      const info = await computeStreakInfo(currentCalories, caloriesTarget, currentMacros, targets);
       setStreakInfo(info);
     } catch (err) {
       console.error('[useStreak] refresh failed:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [currentCalories, caloriesTarget]);
+  }, [currentCalories, caloriesTarget, currentMacros, targets]);
 
   // Re-compute whenever derived values change
   useEffect(() => {
     refresh();
-  }, [currentCalories, caloriesTarget, refresh]);
+  }, [currentCalories, caloriesTarget, currentMacros, refresh]);
 
   return { streakInfo, isLoading, refresh };
 }

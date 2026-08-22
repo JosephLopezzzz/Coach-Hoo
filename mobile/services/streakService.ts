@@ -1,5 +1,5 @@
 import { mealsApi, getLocalDateString } from './api';
-import type { DayQuality, StreakDayEntry, StreakInfo, StreakLevelName } from '../types';
+import type { DayQuality, StreakDayEntry, StreakInfo, StreakLevelName, MacroResult, DailyTargets } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -36,9 +36,32 @@ function getFlameLevel(streak: number): { level: 1|2|3|4|5; name: StreakLevelNam
   return { level: 1, name: 'Spark' };
 }
 
-function classifyQuality(calories: number, target: number, hasLogged: boolean, isToday: boolean = false): DayQuality {
+function classifyQuality(
+  calories: number,
+  target: number,
+  hasLogged: boolean,
+  isToday: boolean = false,
+  macros?: MacroResult,
+  macroTargets?: DailyTargets | null,
+): DayQuality {
   if (!hasLogged) return 0;
   if (target <= 0) return 1; // no target set — just count as logged
+
+  // Today's quality reflects the macro targets shown in the dashboard. A day
+  // is perfect when every macro is within a practical 90%-125% target band.
+  // The calorie-only fallback below is retained for historical entries.
+  if (isToday && macros && macroTargets) {
+    const withinBand = (value: number, goal: number) =>
+      goal > 0 && value >= goal * 0.9 && value <= goal * 1.25;
+    if (
+      withinBand(macros.protein, macroTargets.protein_target) &&
+      withinBand(macros.carbs, macroTargets.carbs_target) &&
+      withinBand(macros.fat, macroTargets.fat_target) &&
+      withinBand(macros.calories, macroTargets.calories_target)
+    ) {
+      return 3;
+    }
+  }
   
   const diff = calories - target;
 
@@ -81,7 +104,12 @@ export function clearStreakCache() {
   _cachedLastUpdateDate = null;
 }
 
-export async function computeStreakInfo(currentCalories: number, caloriesTarget: number): Promise<StreakInfo> {
+export async function computeStreakInfo(
+  currentCalories: number,
+  caloriesTarget: number,
+  currentMacros?: MacroResult,
+  macroTargets?: DailyTargets | null,
+): Promise<StreakInfo> {
   try {
     const todayStr = getLocalDateString(new Date());
     
@@ -117,7 +145,14 @@ export async function computeStreakInfo(currentCalories: number, caloriesTarget:
       if (entry.date === todayStr) {
         return {
           date: todayStr,
-          quality: classifyQuality(currentCalories, caloriesTarget, currentCalories > 0, true),
+          quality: classifyQuality(
+            currentCalories,
+            caloriesTarget,
+            currentCalories > 0,
+            true,
+            currentMacros,
+            macroTargets,
+          ),
           calories: currentCalories,
         };
       }
