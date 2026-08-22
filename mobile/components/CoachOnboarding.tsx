@@ -471,6 +471,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="feedback"
+              bubbleRef={bubbleRef}
             >
               {typingDone && (
                 <PrimaryBtn label={getContinueLabel(lang)} onPress={() => goToStep(step + 1)} />
@@ -488,6 +489,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="goal"
+              bubbleRef={bubbleRef}
             >
               <View style={styles.optionsStack}>
                 {goalKeys.map((g) => (
@@ -524,6 +526,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="health"
+              bubbleRef={bubbleRef}
             >
               {typingDone && (
                 <View style={styles.optionsStack}>
@@ -594,6 +597,7 @@ export default function CoachOnboarding() {
               typingDone={typingDone}
               onTypeDone={() => setTypingDone(true)}
               stepKey="allergies"
+              bubbleRef={bubbleRef}
             >
               {typingDone && (
                 <View style={styles.optionsStack}>
@@ -1053,4 +1057,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+
 
