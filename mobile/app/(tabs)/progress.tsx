@@ -578,8 +578,8 @@ function StreakHeroCard({
         {/* Legend */}
         <View style={styles.streakLegendRow}>
           {[
-            { color: '#E8A254', label: 'Perfect' },
-            { color: '#FFA76C', label: 'Close'   },
+            { color: '#D94A1E', label: 'Perfect' },
+            { color: '#E8A254', label: 'Close'   },
             { color: '#F4C97A', label: 'Logged'  },
             { color: 'transparent', label: 'Missed', border: true },
           ].map(item => (

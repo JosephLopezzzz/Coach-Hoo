@@ -8,15 +8,15 @@ const CALENDAR_DAYS = 90;
 
 /**
  * Calorie proximity thresholds (relative to target).
- * Perfect: ±150 kcal    → quality 3
- * Close:   -500 / +300  → quality 2
- * Logged:  any other    → quality 1
- * Missed:  no meals     → quality 0
+ * Perfect: -300 / +400   → quality 3  (within ~15-18% of a 2200 target)
+ * Close:   -800 / +800   → quality 2  (within ~36% of a 2200 target)
+ * Logged:  any other      → quality 1  (way under or way over)
+ * Missed:  no meals       → quality 0
  */
 const PERFECT_LOWER = -300;
-const PERFECT_UPPER = 200;
+const PERFECT_UPPER = 400;
 const CLOSE_LOWER   = -800;
-const CLOSE_UPPER   = 400;
+const CLOSE_UPPER   = 800;
 
 // ─── Flame level thresholds ───────────────────────────────────────────────────
 const LEVELS: { min: number; level: 1 | 2 | 3 | 4 | 5; name: StreakLevelName }[] = [
@@ -47,9 +47,7 @@ function classifyQuality(
   if (!hasLogged) return 0;
   if (target <= 0) return 1; // no target set — just count as logged
 
-  // Today's quality reflects the macro targets shown in the dashboard. A day
-  // is perfect when every macro is within a practical 90%-125% target band.
-  // The calorie-only fallback below is retained for historical entries.
+  // If they hit all their macro targets perfectly (90%-125%), award a Perfect score
   if (isToday && macros && macroTargets) {
     const withinBand = (value: number, goal: number) =>
       goal > 0 && value >= goal * 0.9 && value <= goal * 1.25;
@@ -65,19 +63,13 @@ function classifyQuality(
   
   const diff = calories - target;
 
-  // If it's today and they are still under the upper bound, they are "On Track".
-  // We don't want to penalize them with a grey dot just because they've only eaten breakfast!
-  if (isToday && diff <= PERFECT_UPPER) {
-    return 3; // Perfect / On Track
-  }
-  if (isToday && diff <= CLOSE_UPPER) {
-    return 2; // Close / Slightly Over
-  }
-
-  // Historical or exceeding bounds evaluation
+  // Perfect if within [-300, +200]
   if (diff >= PERFECT_LOWER && diff <= PERFECT_UPPER) return 3;
+  
+  // Close if within [-800, +400]
   if (diff >= CLOSE_LOWER   && diff <= CLOSE_UPPER)   return 2;
   
+  // Otherwise, they logged something but missed the close window (either starvation or binge)
   return 1;
 }
 
@@ -143,16 +135,19 @@ export async function computeStreakInfo(
     // Compute quality dynamically so it uses the latest caloriesTarget
     const calendarData: StreakDayEntry[] = _cachedCalendarData.map((entry) => {
       if (entry.date === todayStr) {
-        return {
-          date: todayStr,
-          quality: classifyQuality(
+        const todayQuality = classifyQuality(
             currentCalories,
             caloriesTarget,
             currentCalories > 0,
             true,
             currentMacros,
             macroTargets,
-          ),
+          );
+        const todayColor = getQualityColor(todayQuality);
+        console.log(`[STREAK DEBUG] today=${todayStr} cal=${currentCalories} target=${caloriesTarget} diff=${currentCalories - caloriesTarget} quality=${todayQuality} color=${todayColor}`);
+        return {
+          date: todayStr,
+          quality: todayQuality,
           calories: currentCalories,
         };
       }
@@ -256,9 +251,9 @@ export function getNextMilestone(currentStreak: number): StreakMilestone | null 
 /** Returns the hex color for a given day quality tier */
 export function getQualityColor(quality: DayQuality): string {
   switch (quality) {
-    case 3: return '#E8A254'; // golden — Perfect
-    case 2: return '#FFA76C'; // peach-orange — Close
-    case 1: return '#F4C97A'; // soft yellow — Logged
+    case 3: return '#D94A1E'; // red orange — Perfect
+    case 2: return '#E8A254'; // orange — Close
+    case 1: return '#F4C97A'; // yellow — Logged
     default: return 'transparent';
   }
 }

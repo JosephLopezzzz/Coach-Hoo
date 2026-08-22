@@ -44,28 +44,45 @@ function SpotlightCutout({
   screenW: number;
   screenH: number;
 }) {
-  const safeTop = Math.max(0, rect.top);
-  const holeBottom = rect.top + rect.height;
-  const safeBottomHeight = Math.max(0, screenH - holeBottom);
-  const safeLeft = Math.max(0, rect.left);
-  const holeRight = rect.left + rect.width;
-  const safeRightWidth = Math.max(0, screenW - holeRight);
-  const safeHeight = Math.max(0, rect.height);
+  const PAD = 6;
+  const BORDER_SIZE = 4000;
+
+  // The actual hole size (padded)
+  const holeWidth = rect.width + 2 * PAD;
+  const holeHeight = rect.height + 2 * PAD;
+  const holeLeft = rect.left - PAD;
+  const holeTop = rect.top - PAD;
+  const holeRadius = rect.rx + PAD;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[styles.curtain, { top: 0, left: 0, right: 0, height: safeTop }]} />
-      <View style={[styles.curtain, { bottom: 0, left: 0, right: 0, height: safeBottomHeight }]} />
-      <View style={[styles.curtain, { top: safeTop, left: 0, width: safeLeft, height: safeHeight }]} />
-      <View style={[styles.curtain, { top: safeTop, right: 0, width: safeRightWidth, height: safeHeight }]} />
+      {/* 
+        Massive border trick: 
+        Creates a perfect transparent hole using a single View's borders.
+        The inner hole sits exactly at holeLeft/holeTop.
+      */}
       <View
         style={{
           position: 'absolute',
-          top: rect.top - 4,
-          left: rect.left - 4,
-          width: rect.width + 8,
-          height: rect.height + 8,
-          borderRadius: rect.rx + 4,
+          left: holeLeft - BORDER_SIZE,
+          top: holeTop - BORDER_SIZE,
+          width: holeWidth + 2 * BORDER_SIZE,
+          height: holeHeight + 2 * BORDER_SIZE,
+          borderWidth: BORDER_SIZE,
+          borderColor: 'rgba(31, 41, 55, 0.75)',
+          borderRadius: holeRadius + BORDER_SIZE,
+        }}
+      />
+
+      {/* Dashed white border around the hole */}
+      <View
+        style={{
+          position: 'absolute',
+          top: holeTop,
+          left: holeLeft,
+          width: holeWidth,
+          height: holeHeight,
+          borderRadius: holeRadius,
           borderWidth: 2,
           borderColor: '#FFFFFF',
           borderStyle: 'dashed',
@@ -95,6 +112,7 @@ export default function DashboardTutorial({
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const isMeasuring = useRef(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const { width: screenW, height: screenH } = Dimensions.get('window');
@@ -162,29 +180,48 @@ export default function DashboardTutorial({
 
   const goTo = useCallback(
     async (next: number) => {
+      if (isMeasuring.current) return;
+      isMeasuring.current = true;
+
       setStep(next);
       setSpotlight(null);
 
       const target = steps[next];
       const ref = target?.getRef?.();
-      if (!ref) return;
+      if (!ref) {
+        isMeasuring.current = false;
+        return;
+      }
 
       if (target.scrollTo !== undefined && scrollViewRef?.current) {
         scrollViewRef.current.scrollTo({ y: target.scrollTo, animated: true });
-        await new Promise((resolve) => setTimeout(resolve, 350));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      const rect = await measureTarget(ref);
+      let rect = await measureTarget(ref);
+      if (!rect) {
+        // Wait and retry once
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        rect = await measureTarget(ref);
+      }
+
       if (rect) {
         setSpotlight(rect);
       } else {
-        setTimeout(async () => {
-          const retry = await measureTarget(ref);
-          if (retry) setSpotlight(retry);
-        }, 300);
+        const fallbackRect = {
+          top: screenH / 2 - 40,
+          left: screenW / 2 - 40,
+          width: 80,
+          height: 80,
+          rx: 8,
+          ry: 8,
+        };
+        setSpotlight(fallbackRect);
       }
+
+      isMeasuring.current = false;
     },
-    [measureTarget, scrollViewRef],
+    [measureTarget, scrollViewRef, screenH, screenW],
   );
 
   // Reset
@@ -300,6 +337,7 @@ export default function DashboardTutorial({
           tooltipStyle,
           spotlight ? { paddingTop: Spacing.lg } : null,
           cardMaxHeight ? { maxHeight: Math.max(cardMaxHeight, 120) } : null,
+          { zIndex: 9999 },
         ]}>
           
           {/* Caret pointing to spotlight */}
@@ -338,7 +376,7 @@ export default function DashboardTutorial({
         </Animated.View>
 
         {/* Sticky navigation footer — always pinned to the bottom */}
-        <Animated.View style={[styles.stickyFooter, { opacity: fadeAnim, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Animated.View style={[styles.stickyFooter, { opacity: fadeAnim, paddingBottom: Math.max(insets.bottom, 16), zIndex: 9999 }]}>
           <Pressable onPress={handleSkip} style={styles.skipBtn}>
             <Text style={styles.skipText}>{t('common.skip')}</Text>
           </Pressable>
