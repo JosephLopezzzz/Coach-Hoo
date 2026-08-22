@@ -135,19 +135,16 @@ export async function computeStreakInfo(
     // Compute quality dynamically so it uses the latest caloriesTarget
     const calendarData: StreakDayEntry[] = _cachedCalendarData.map((entry) => {
       if (entry.date === todayStr) {
-        const todayQuality = classifyQuality(
+        return {
+          date: todayStr,
+          quality: classifyQuality(
             currentCalories,
             caloriesTarget,
             currentCalories > 0,
             true,
             currentMacros,
             macroTargets,
-          );
-        const todayColor = getQualityColor(todayQuality);
-        console.log(`[STREAK DEBUG] today=${todayStr} cal=${currentCalories} target=${caloriesTarget} diff=${currentCalories - caloriesTarget} quality=${todayQuality} color=${todayColor}`);
-        return {
-          date: todayStr,
-          quality: todayQuality,
+          ),
           calories: currentCalories,
         };
       }

@@ -15,7 +15,8 @@ import { resetTutorial } from '../../components/DashboardTutorial';
 import { FontSize, FontWeight, Spacing, Radius, ThemeColors } from '../../constants/theme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { useTheme } from '../../context/ThemeContext';
-import { getHealthSyncConfig, setHealthSyncEnabled, syncDailyTotalsToHealth, type HealthSyncConfig } from '../../services/healthSyncService';
+import { getHealthSyncConfig, setHealthSyncEnabled, syncDailyTotalsToHealth, readHealthData, initHealthConnect, type HealthSyncConfig, type HealthReadData } from '../../services/healthSyncService';
+import { useMeals } from '../../context/MealContext';
 
 
 const LANGUAGE_OPTIONS: { key: Language; labelKey: StringKey; flag: string }[] = [
@@ -50,12 +51,27 @@ export default function ProfileScreen() {
   const { colors, theme, setTheme } = useTheme();
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+  const { totals } = useMeals();
   const [resetting, setResetting] = useState(false);
   const [healthConfig, setHealthConfig] = useState<HealthSyncConfig | null>(null);
   const [syncingHealth, setSyncingHealth] = useState(false);
+  const [healthData, setHealthData] = useState<HealthReadData>({ steps: null, weight: null });
 
   React.useEffect(() => {
-    getHealthSyncConfig().then(setHealthConfig);
+    // Initialize Health Connect and load config
+    const init = async () => {
+      if (Platform.OS === 'android') {
+        await initHealthConnect();
+      }
+      const cfg = await getHealthSyncConfig();
+      setHealthConfig(cfg);
+      // If sync is enabled, read health data
+      if (cfg.enabled && cfg.permissionsGranted) {
+        const data = await readHealthData();
+        setHealthData(data);
+      }
+    };
+    init();
   }, []);
 
   const handleToggleHealthSync = async (val: boolean) => {
@@ -63,22 +79,38 @@ export default function ProfileScreen() {
     if (ok) {
       const updated = await getHealthSyncConfig();
       setHealthConfig(updated);
+      // Read health data when enabling
+      if (val && updated.permissionsGranted) {
+        const data = await readHealthData();
+        setHealthData(data);
+      }
+    } else if (val) {
+      // Permission denied or HC not available
+      Alert.alert(
+        'Health Connect',
+        'Could not connect to Health Connect. Please make sure it is installed and permissions are granted.',
+      );
     }
   };
 
   const handleManualHealthSync = async () => {
-    if (!user?.calories_target) return;
     setSyncingHealth(true);
     try {
+      // Sync actual consumed totals (not targets)
       await syncDailyTotalsToHealth({
-        calories: user.calories_target,
-        protein: user.protein_target || 0,
-        carbs: user.carbs_target || 0,
-        fat: user.fat_target || 0,
+        calories: Math.round(totals.calories),
+        protein: Math.round(totals.protein),
+        carbs: Math.round(totals.carbs),
+        fat: Math.round(totals.fat),
       });
       const updated = await getHealthSyncConfig();
       setHealthConfig(updated);
-      Alert.alert('Health Sync', `Synced metrics to ${updated.platform}`);
+      // Also refresh read data
+      const data = await readHealthData();
+      setHealthData(data);
+      Alert.alert('Health Sync', `Synced today\'s nutrition to ${updated.platform}`);
+    } catch (e) {
+      Alert.alert('Sync Failed', 'Could not sync to Health Connect. Please try again.');
     } finally {
       setSyncingHealth(false);
     }
@@ -368,10 +400,10 @@ export default function ProfileScreen() {
           <View style={{ flex: 1, paddingRight: Spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
               <Ionicons name="heart" size={18} color="#ef4444" />
-              <Text style={styles.cardTitle}>Native Health Sync</Text>
+              <Text style={styles.cardTitle}>Health Connect</Text>
             </View>
             <Text style={styles.langHint}>
-              Sync logged calories & macros to {healthConfig?.platform || 'Health Dashboard'} automatically.
+              Sync logged calories & macros to {healthConfig?.platform || 'Health Connect'} automatically.
             </Text>
           </View>
           <Switch
@@ -382,18 +414,55 @@ export default function ProfileScreen() {
         </View>
 
         {healthConfig?.enabled && (
-          <View style={{ marginTop: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: FontSize.xs, color: colors.textMuted }}>
-              Last Synced: {healthConfig.lastSyncedAt ? new Date(healthConfig.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-            </Text>
-            <AnimatedPressable
-              style={{ backgroundColor: colors.primaryGlow, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.sm, borderWidth: 1, borderColor: colors.primary }}
-              onPress={handleManualHealthSync}
-            >
-              <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.primary }}>
-                {syncingHealth ? 'Syncing...' : 'Sync Now'}
+          <View style={{ marginTop: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }}>
+            {/* Permission status */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm }}>
+              <Ionicons
+                name={healthConfig.permissionsGranted ? 'checkmark-circle' : 'alert-circle'}
+                size={16}
+                color={healthConfig.permissionsGranted ? '#10b981' : '#f59e0b'}
+              />
+              <Text style={{ fontSize: FontSize.xs, color: healthConfig.permissionsGranted ? '#10b981' : '#f59e0b' }}>
+                {healthConfig.permissionsGranted ? 'Permissions granted' : 'Permissions needed'}
               </Text>
-            </AnimatedPressable>
+            </View>
+
+            {/* Read data from Health Connect */}
+            {healthConfig.permissionsGranted && (healthData.steps !== null || healthData.weight !== null) && (
+              <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.sm }}>
+                {healthData.steps !== null && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="footsteps-outline" size={14} color={colors.textSecondary} />
+                    <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>
+                      {healthData.steps.toLocaleString()} steps today
+                    </Text>
+                  </View>
+                )}
+                {healthData.weight !== null && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="scale-outline" size={14} color={colors.textSecondary} />
+                    <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>
+                      {healthData.weight.toFixed(1)} kg
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Sync controls */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: FontSize.xs, color: colors.textMuted }}>
+                Last Synced: {healthConfig.lastSyncedAt ? new Date(healthConfig.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+              </Text>
+              <AnimatedPressable
+                style={{ backgroundColor: colors.primaryGlow, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.sm, borderWidth: 1, borderColor: colors.primary }}
+                onPress={handleManualHealthSync}
+              >
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.primary }}>
+                  {syncingHealth ? 'Syncing...' : 'Sync Now'}
+                </Text>
+              </AnimatedPressable>
+            </View>
           </View>
         )}
       </View>

@@ -17,7 +17,13 @@
         "foregroundImage": "./assets/appIcon.png",
         "backgroundColor": "#FAF6EE"
       },
-      "package": "com.coachhoo.app"
+      "package": "com.coachhoo.app",
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_NUTRITION",
+        "android.permission.health.WRITE_NUTRITION"
+      ]
     },
     "ios": {
       "supportsTablet": true,
@@ -32,7 +38,18 @@
           "fonts": []
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
